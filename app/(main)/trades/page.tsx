@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,8 @@ import { TradeFilters } from '@/components/trade/trade-filters';
 import { Trade } from '@/types/trade';
 import { TradeFilters as ITradeFilters } from '@/types/app';
 import { LocalStorage } from '@/lib/file-system/storage';
+import { searchTrades } from '@/lib/utils/search';
+import { debounce } from '@/lib/utils/debounce';
 import { Plus, Search, Filter } from 'lucide-react';
 
 export default function TradesPage() {
@@ -17,7 +19,8 @@ export default function TradesPage() {
   const [filteredTrades, setFilteredTrades] = useState<Trade[]>([]);
   const [filters, setFilters] = useState<ITradeFilters>({});
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState<'date' | 'ticker' | 'pnl'>('date');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState<'date' | 'ticker' | 'pnl' | 'quantity' | 'price' | 'commission'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showFilters, setShowFilters] = useState(false);
 
@@ -27,15 +30,24 @@ export default function TradesPage() {
     setFilteredTrades(loadedTrades);
   }, []);
 
+  // Debounced search handler
+  const debouncedSearch = useMemo(
+    () => debounce((value: string) => {
+      setDebouncedSearchTerm(value);
+    }, 300),
+    []
+  );
+
+  useEffect(() => {
+    debouncedSearch(searchTerm);
+  }, [searchTerm, debouncedSearch]);
+
   useEffect(() => {
     let filtered = [...trades];
 
-    // Apply search filter
-    if (searchTerm) {
-      filtered = filtered.filter(trade => 
-        trade.ticker.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (trade.tags || []).some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
+    // Apply search filter with full-text search
+    if (debouncedSearchTerm) {
+      filtered = searchTrades(filtered, debouncedSearchTerm);
     }
 
     // Apply filters
@@ -73,6 +85,34 @@ export default function TradesPage() {
       });
     }
 
+    if (filters.quantityRange) {
+      filtered = filtered.filter(trade => {
+        return trade.quantity >= filters.quantityRange!.min && 
+               trade.quantity <= filters.quantityRange!.max;
+      });
+    }
+
+    if (filters.pnlCategory && filters.pnlCategory !== 'all') {
+      filtered = filtered.filter(trade => {
+        const pnl = trade.pnl || 0;
+        switch (filters.pnlCategory) {
+          case 'profitable':
+            return pnl > 0;
+          case 'loss':
+            return pnl < 0;
+          case 'breakeven':
+            return pnl === 0;
+          default:
+            return true;
+        }
+      });
+    }
+
+    if (filters.hasImages !== undefined) {
+      // Placeholder for image filtering - will be implemented when image functionality is added
+      // For now, this filter doesn't affect results
+    }
+
     // Apply sorting
     filtered.sort((a, b) => {
       let aValue: any, bValue: any;
@@ -90,6 +130,18 @@ export default function TradesPage() {
           aValue = a.pnl || 0;
           bValue = b.pnl || 0;
           break;
+        case 'quantity':
+          aValue = a.quantity;
+          bValue = b.quantity;
+          break;
+        case 'price':
+          aValue = a.price;
+          bValue = b.price;
+          break;
+        case 'commission':
+          aValue = a.commission || 0;
+          bValue = b.commission || 0;
+          break;
       }
 
       if (sortOrder === 'asc') {
@@ -100,7 +152,7 @@ export default function TradesPage() {
     });
 
     setFilteredTrades(filtered);
-  }, [trades, searchTerm, filters, sortBy, sortOrder]);
+  }, [trades, debouncedSearchTerm, filters, sortBy, sortOrder]);
 
   const handleFilterChange = (newFilters: ITradeFilters) => {
     setFilters(newFilters);
@@ -110,6 +162,48 @@ export default function TradesPage() {
     const updatedTrades = trades.filter(trade => trade.id !== tradeId);
     setTrades(updatedTrades);
     LocalStorage.saveTrades(updatedTrades);
+  };
+
+  const handleBulkDelete = (tradeIds: string[]) => {
+    const updatedTrades = trades.filter(trade => !tradeIds.includes(trade.id));
+    setTrades(updatedTrades);
+    LocalStorage.saveTrades(updatedTrades);
+  };
+
+  const handleExportTrades = (tradeIds: string[]) => {
+    const tradesToExport = trades.filter(trade => tradeIds.includes(trade.id));
+    const csv = convertTradesToCSV(tradesToExport);
+    downloadCSV(csv, `trades-export-${new Date().toISOString().split('T')[0]}.csv`);
+  };
+
+  // Helper function to convert trades to CSV
+  const convertTradesToCSV = (trades: Trade[]): string => {
+    const headers = ['Date', 'Ticker', 'Action', 'Quantity', 'Price', 'Commission', 'P&L', 'Tags'];
+    const rows = trades.map(trade => [
+      trade.date,
+      trade.ticker,
+      trade.action,
+      trade.quantity.toString(),
+      trade.price.toString(),
+      (trade.commission || 0).toString(),
+      (trade.pnl || 0).toString(),
+      (trade.tags || []).join(';')
+    ]);
+    
+    return [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+  };
+
+  // Helper function to download CSV
+  const downloadCSV = (csv: string, filename: string) => {
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const totalPnL = filteredTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0);
@@ -192,14 +286,17 @@ export default function TradesPage() {
                 />
               </div>
               
-              <Select value={sortBy} onValueChange={(value: 'date' | 'ticker' | 'pnl') => setSortBy(value)}>
-                <SelectTrigger className="w-32">
+              <Select value={sortBy} onValueChange={(value: 'date' | 'ticker' | 'pnl' | 'quantity' | 'price' | 'commission') => setSortBy(value)}>
+                <SelectTrigger className="w-40">
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="date">Date</SelectItem>
                   <SelectItem value="ticker">Ticker</SelectItem>
                   <SelectItem value="pnl">P&L</SelectItem>
+                  <SelectItem value="quantity">Quantity</SelectItem>
+                  <SelectItem value="price">Price</SelectItem>
+                  <SelectItem value="commission">Commission</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -233,6 +330,8 @@ export default function TradesPage() {
             <TradesList 
               trades={filteredTrades} 
               onDeleteTrade={handleDeleteTrade}
+              onBulkDelete={handleBulkDelete}
+              onExportTrades={handleExportTrades}
             />
           </div>
         </CardContent>

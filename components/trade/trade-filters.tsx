@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { X, Plus } from 'lucide-react';
 import { TradeFilters as ITradeFilters } from '@/types/app';
+import { FilterPresets } from './filter-presets';
 
 interface TradeFiltersProps {
   filters: ITradeFilters;
@@ -123,6 +124,56 @@ export function TradeFilters({ filters, onFiltersChange, availableTickers }: Tra
               />
             </div>
           </div>
+
+          {/* Quantity Range */}
+          <div className="space-y-2">
+            <Label>Quantity Range</Label>
+            <div className="flex space-x-2">
+              <Input
+                type="number"
+                value={filters.quantityRange?.min || ''}
+                onChange={(e) => updateFilters({
+                  quantityRange: {
+                    min: parseFloat(e.target.value) || 0,
+                    max: filters.quantityRange?.max || 0
+                  }
+                })}
+                placeholder="Min Quantity"
+              />
+              <Input
+                type="number"
+                value={filters.quantityRange?.max || ''}
+                onChange={(e) => updateFilters({
+                  quantityRange: {
+                    min: filters.quantityRange?.min || 0,
+                    max: parseFloat(e.target.value) || 0
+                  }
+                })}
+                placeholder="Max Quantity"
+              />
+            </div>
+          </div>
+
+          {/* P&L Category */}
+          <div className="space-y-2">
+            <Label>P&L Category</Label>
+            <Select
+              value={filters.pnlCategory || 'all'}
+              onValueChange={(value: 'profitable' | 'loss' | 'breakeven' | 'all') => {
+                updateFilters({ pnlCategory: value === 'all' ? undefined : value });
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="All trades" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All trades</SelectItem>
+                <SelectItem value="profitable">Profitable</SelectItem>
+                <SelectItem value="loss">Loss</SelectItem>
+                <SelectItem value="breakeven">Break-even</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* Tickers */}
@@ -219,9 +270,15 @@ export function TradeFilters({ filters, onFiltersChange, availableTickers }: Tra
 
         {/* Actions */}
         <div className="flex justify-between pt-4">
-          <Button variant="outline" onClick={clearFilters}>
-            Clear Filters
-          </Button>
+          <div className="flex space-x-2">
+            <Button variant="outline" onClick={clearFilters}>
+              Clear Filters
+            </Button>
+            <FilterPresets 
+              currentFilters={filters} 
+              onApplyPreset={onFiltersChange}
+            />
+          </div>
           <div className="text-sm text-gray-600">
             {Object.keys(filters).length} filter(s) applied
           </div>
