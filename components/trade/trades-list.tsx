@@ -28,9 +28,11 @@ import { formatDate, formatCurrency } from '@/lib/utils';
 interface TradesListProps {
   trades: Trade[];
   onDeleteTrade: (tradeId: string) => void;
+  onBulkDelete?: (tradeIds: string[]) => void;
+  onExportTrades?: (tradeIds: string[]) => void;
 }
 
-export function TradesList({ trades, onDeleteTrade }: TradesListProps) {
+export function TradesList({ trades, onDeleteTrade, onBulkDelete, onExportTrades }: TradesListProps) {
   const [selectedTrades, setSelectedTrades] = useState<string[]>([]);
 
   const handleSelectAll = (checked: boolean) => {
@@ -208,10 +210,15 @@ export function TradesList({ trades, onDeleteTrade }: TradesListProps) {
             {selectedTrades.length} trade(s) selected
           </span>
           <div className="flex space-x-2">
-            <Button size="sm" variant="outline">
-              Bulk Edit
-            </Button>
-            <Button size="sm" variant="outline">
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={() => {
+                if (onExportTrades) {
+                  onExportTrades(selectedTrades);
+                }
+              }}
+            >
               Export
             </Button>
             <Button 
@@ -219,7 +226,11 @@ export function TradesList({ trades, onDeleteTrade }: TradesListProps) {
               variant="destructive"
               onClick={() => {
                 if (confirm(`Are you sure you want to delete ${selectedTrades.length} trades?`)) {
-                  selectedTrades.forEach(tradeId => onDeleteTrade(tradeId));
+                  if (onBulkDelete) {
+                    onBulkDelete(selectedTrades);
+                  } else {
+                    selectedTrades.forEach(tradeId => onDeleteTrade(tradeId));
+                  }
                   setSelectedTrades([]);
                 }
               }}

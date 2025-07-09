@@ -34,6 +34,20 @@ export interface TradeFilters {
     min: number;
     max: number;
   };
+  quantityRange?: {
+    min: number;
+    max: number;
+  };
+  pnlCategory?: 'profitable' | 'loss' | 'breakeven' | 'all';
+}
+
+export interface FilterPreset {
+  id: string;
+  name: string;
+  description?: string;
+  filters: TradeFilters;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface GalleryView {
