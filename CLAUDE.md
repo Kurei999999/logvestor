@@ -46,6 +46,9 @@ The application follows a local-first architecture with these key concepts:
 3. **Image Gallery**: Grid and timeline views of trade charts
 4. **Portfolio Management**: CSV/Excel file integration with custom field mapping
 5. **Analytics**: Performance analysis and visualization
+6. **Advanced Search & Filtering**: Full-text search, debounced performance, multiple filter criteria
+7. **Filter Presets**: Save and manage commonly used filter combinations
+8. **Bulk Operations**: Bulk select, delete, and export trades
 
 ### Directory Structure (Planned)
 ```
@@ -69,7 +72,8 @@ lib/
 ├── parsers/           # CSV/Excel/MD parsing
 ├── csv-mapper/        # CSV mapping logic
 ├── trade-linker/      # CSV-MD linking
-└── utils/             # Utilities
+├── trade-filters/     # Filter presets management
+└── utils/             # Utilities (search, debounce)
 
 electron/              # Electron main process
 ├── main.ts
