@@ -1,0 +1,56 @@
+export interface AppConfig {
+  dataDirectory: string;
+  tradeDirectory: string;
+  portfolioDirectory: string;
+  templatesDirectory: string;
+  defaultCSVMapping: string;
+  theme: 'light' | 'dark' | 'system';
+  autoBackup: boolean;
+  backupInterval: number;
+  maxBackups: number;
+}
+
+export interface AppState {
+  trades: Trade[];
+  csvMappings: CSVMapping[];
+  selectedTrades: string[];
+  filters: TradeFilters;
+  view: 'list' | 'grid' | 'timeline';
+  loading: boolean;
+  error: string | null;
+}
+
+export interface TradeFilters {
+  dateRange?: {
+    start: string;
+    end: string;
+  };
+  tickers?: string[];
+  actions?: ('buy' | 'sell')[];
+  tags?: string[];
+  hasNotes?: boolean;
+  hasImages?: boolean;
+  pnlRange?: {
+    min: number;
+    max: number;
+  };
+}
+
+export interface GalleryView {
+  mode: 'grid' | 'timeline' | 'pair';
+  sortBy: 'date' | 'ticker' | 'pnl';
+  sortOrder: 'asc' | 'desc';
+  filters: TradeFilters;
+}
+
+export interface FileSystemItem {
+  name: string;
+  path: string;
+  type: 'file' | 'directory';
+  size?: number;
+  lastModified?: string;
+  children?: FileSystemItem[];
+}
+
+import { Trade } from './trade';
+import { CSVMapping } from './csv';
