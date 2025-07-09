@@ -2,6 +2,7 @@ import type { IDataService, IServiceFactory, ServiceConfig } from './interfaces/
 import { DEFAULT_SERVICE_CONFIG } from './interfaces/data-service';
 import { BrowserDataService } from './browser/browser-data-service';
 import { ElectronDataService } from './electron/electron-data-service';
+import { ElectronFileService } from './electron/electron-file-service';
 
 /**
  * Service factory for creating appropriate data service based on environment
@@ -34,8 +35,8 @@ export class ServiceFactory implements IServiceFactory {
 
     // Determine environment and create appropriate service
     if (this.isElectronEnvironment()) {
-      console.log('[ServiceFactory] Creating Electron data service');
-      ServiceFactory.dataServiceInstance = new ElectronDataService();
+      console.log('[ServiceFactory] Creating Electron file service');
+      ServiceFactory.dataServiceInstance = new ElectronFileService();
     } else if (this.isBrowserEnvironment()) {
       console.log('[ServiceFactory] Creating Browser data service');
       ServiceFactory.dataServiceInstance = new BrowserDataService();
@@ -60,13 +61,15 @@ export class ServiceFactory implements IServiceFactory {
       (window as any).electron ||
       (window as any).electronAPI ||
       (window as any).require ||
+      (window as any).isElectron ||
       (process && process.versions && process.versions.electron)
     );
 
     // Additional check for preload script exposure
     const hasIPC = !!(
       (window as any).electron?.ipcRenderer ||
-      (window as any).electronAPI?.ipcRenderer
+      (window as any).electronAPI?.fs ||
+      (window as any).electronAPI?.dialog
     );
 
     return hasElectronAPI || hasIPC;
@@ -211,7 +214,8 @@ export class ServiceFactory implements IServiceFactory {
     
     return !!(
       (window as any).electron?.ipcRenderer ||
-      (window as any).electronAPI?.ipcRenderer
+      (window as any).electronAPI?.fs ||
+      (window as any).electronAPI?.dialog
     );
   }
 
