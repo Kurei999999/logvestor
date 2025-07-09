@@ -12,7 +12,8 @@ import {
   Upload,
   FileText,
   Menu,
-  X
+  X,
+  Zap
 } from 'lucide-react';
 
 const navigation = [
@@ -21,6 +22,7 @@ const navigation = [
   { name: 'Gallery', href: '/gallery', icon: Images },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Import', href: '/import', icon: Upload },
+  { name: 'IPC Test', href: '/ipc-test', icon: Zap },
 ];
 
 export function Navigation() {

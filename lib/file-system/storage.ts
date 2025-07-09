@@ -120,6 +120,76 @@ export class LocalStorage {
     }
   }
 
+  // Alias methods for consistency with other parts of the codebase
+  static getSelectedTrades(): string[] {
+    return this.loadSelectedTrades();
+  }
+
+  static setSelectedTrades(tradeIds: string[]): void {
+    this.saveSelectedTrades(tradeIds);
+  }
+
+  // Additional getter/setter methods for migration compatibility
+  static getTrades(): Trade[] {
+    return this.loadTrades();
+  }
+
+  static setTrades(trades: Trade[]): void {
+    this.saveTrades(trades);
+  }
+
+  static getCSVMappings(): CSVMapping[] {
+    return this.loadCSVMappings();
+  }
+
+  static setCSVMappings(mappings: CSVMapping[]): void {
+    this.saveCSVMappings(mappings);
+  }
+
+  static getConfig(): AppConfig | null {
+    return this.loadAppConfig();
+  }
+
+  static setConfig(config: AppConfig): void {
+    this.saveAppConfig(config);
+  }
+
+  // Updated config methods to match interface expectations
+  static loadConfig(): AppConfig {
+    const config = this.loadAppConfig();
+    if (config) {
+      return config;
+    }
+    
+    // Return default config if none exists
+    const defaultConfig: AppConfig = {
+      dataDirectory: '~/Documents/TradeJournal',
+      tradeDirectory: 'trades',
+      portfolioDirectory: 'portfolios',
+      templatesDirectory: 'templates',
+      defaultCSVMapping: '',
+      theme: 'light',
+      autoBackup: true,
+      backupInterval: 24 * 60 * 60 * 1000, // 24 hours in milliseconds
+      maxBackups: 10,
+    };
+    
+    this.saveAppConfig(defaultConfig);
+    return defaultConfig;
+  }
+
+  static saveConfig(config: AppConfig): void {
+    this.saveAppConfig(config);
+  }
+
+  static clearConfig(): void {
+    try {
+      localStorage.removeItem(this.KEYS.APP_CONFIG);
+    } catch (error) {
+      console.error('Failed to clear config from localStorage:', error);
+    }
+  }
+
   static clearAll(): void {
     try {
       Object.values(this.KEYS).forEach(key => {

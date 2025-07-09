@@ -8,6 +8,7 @@ export interface AppConfig {
   autoBackup: boolean;
   backupInterval: number;
   maxBackups: number;
+  selectedTrades?: string[]; // Optional for backward compatibility
 }
 
 export interface AppState {
