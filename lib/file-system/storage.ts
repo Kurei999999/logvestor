@@ -28,6 +28,14 @@ export class LocalStorage {
     }
   }
 
+  static getTrades(): Trade[] {
+    return this.loadTrades();
+  }
+
+  static setTrades(trades: Trade[]): void {
+    this.saveTrades(trades);
+  }
+
   static saveTrade(trade: Trade): void {
     const trades = this.loadTrades();
     const index = trades.findIndex(t => t.id === trade.id);
@@ -65,6 +73,14 @@ export class LocalStorage {
     }
   }
 
+  static getCSVMappings(): CSVMapping[] {
+    return this.loadCSVMappings();
+  }
+
+  static setCSVMappings(mappings: CSVMapping[]): void {
+    this.saveCSVMappings(mappings);
+  }
+
   static saveCSVMapping(mapping: CSVMapping): void {
     const mappings = this.loadCSVMappings();
     const index = mappings.findIndex(m => m.id === mapping.id);
@@ -100,6 +116,14 @@ export class LocalStorage {
       console.error('Failed to load app config from localStorage:', error);
       return null;
     }
+  }
+
+  static getAppConfig(): AppConfig | null {
+    return this.loadAppConfig();
+  }
+
+  static setAppConfig(config: AppConfig): void {
+    this.saveAppConfig(config);
   }
 
   static saveSelectedTrades(tradeIds: string[]): void {
