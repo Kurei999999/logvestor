@@ -74,7 +74,8 @@ components/
 ├── trade/             # Trade-specific components
 ├── gallery/           # Gallery components
 ├── analytics/         # Analytics components
-└── csv-viewer/        # CSV viewer components (implemented)
+├── csv-viewer/        # CSV viewer components (implemented)
+└── markdown/          # Markdown editor components (implemented)
 
 lib/
 ├── file-system/       # File operations
@@ -150,6 +151,7 @@ Based on completed GitHub issues:
 ### Phase 4 Completed:
 - **CSV Viewer/Editor** (#15): Flexible CSV data management without mapping requirements
 - **Enhanced Trade Import** (#16): フォーマット準拠 + カスタムカラム統合 (completed)
+- **Markdown Memo Integration** (#19): Local file-based trade notes system with VSCode-like editing
 
 ### Currently Open:
 - **Export and Backup Functionality** (#3): In progress
@@ -219,3 +221,21 @@ Integration of CSV Viewer flexibility with Trade analytics capabilities.
 - Excel-like editing interface with cell-level modifications
 - Seamless integration between CSV editing and Trade analytics
 - LocalStorage persistence with proper state management
+
+### Markdown Memo Integration (Completed - Issue #19)
+Local file-based trade notes system with VSCode-like editing experience.
+
+**Implementation**: Direct file system integration with real-time markdown editing
+- **TradeNotesDropdown**: Real-time file listing from trade folders
+- **MarkdownSideEditor**: Right-side panel with edit/preview modes
+- **VSCode-like Auto-reload**: External file changes reflected automatically
+- **File System Direct Access**: No LocalStorage dependency for memo data
+- **Existing File Preservation**: Proper file overwrite handling
+
+**Key Features:**
+- Dropdown menu in trade table for memo file access
+- Right-side panel markdown editor with live preview
+- Auto-reload functionality (2-second intervals in preview mode)
+- Direct file system read/write operations
+- Support for multiple markdown files per trade
+- Real-time file listing updates
