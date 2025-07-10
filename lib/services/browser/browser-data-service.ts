@@ -35,10 +35,10 @@ export class BrowserDataService implements IDataService {
 
   async saveTrade(trade: Trade): Promise<ServiceResponse<Trade>> {
     return ErrorHandler.withErrorHandling(async () => {
-      if (!trade.id || !trade.ticker || !trade.date) {
+      if (!trade.id || !trade.ticker || !trade.buyDate) {
         throw new ServiceError(
           ErrorCode.VALIDATION_FAILED,
-          'Trade must have id, ticker, and date',
+          'Trade must have id, ticker, and buyDate',
           { trade }
         );
       }
@@ -109,10 +109,10 @@ export class BrowserDataService implements IDataService {
 
       // Validate all trades
       for (const trade of trades) {
-        if (!trade.id || !trade.ticker || !trade.date) {
+        if (!trade.id || !trade.ticker || !trade.buyDate) {
           throw new ServiceError(
             ErrorCode.VALIDATION_FAILED,
-            'All trades must have id, ticker, and date',
+            'All trades must have id, ticker, and buyDate',
             { invalidTrade: trade }
           );
         }

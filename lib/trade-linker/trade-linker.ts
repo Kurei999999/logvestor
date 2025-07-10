@@ -15,11 +15,14 @@ export class TradeLinker {
       filePath: this.generateFilePath(trade, fileName),
       content,
       frontmatter: {
-        date: frontmatter.date || trade.date,
+        date: frontmatter.date || trade.buyDate,
         ticker: frontmatter.ticker || trade.ticker,
-        action: frontmatter.action || trade.action,
+        status: frontmatter.status || (trade.sellDate ? 'CLOSED' : 'OPEN'),
         quantity: frontmatter.quantity || trade.quantity,
-        price: frontmatter.price || trade.price,
+        buyPrice: frontmatter.buyPrice || trade.buyPrice,
+        sellPrice: frontmatter.sellPrice || trade.sellPrice,
+        buyDate: frontmatter.buyDate || trade.buyDate,
+        sellDate: frontmatter.sellDate || trade.sellDate,
         tags: frontmatter.tags || trade.tags || [],
         ...frontmatter
       },
@@ -69,15 +72,16 @@ export class TradeLinker {
   }
 
   static generateFilePath(trade: Trade, fileName: string): string {
-    const date = new Date(trade.date);
+    const date = new Date(trade.buyDate);
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
-    const tradeFolder = `T${trade.id}_${trade.ticker}_${trade.action === 'buy' ? '買い' : '売り'}`;
+    const status = trade.sellDate ? 'CLOSED' : 'OPEN';
+    const tradeFolder = `T${trade.id}_${trade.ticker}_${status}`;
     
     return `trades/${year}/${month}/${tradeFolder}/${fileName}`;
   }
 
-  static createMarkdownTemplate(trade: Trade, type: 'entry' | 'exit' | 'analysis' | 'followup'): string {
+  static createMarkdownTemplate(trade: Trade, type: 'entry' | 'exit' | 'analysis' | 'followup' | 'custom'): string {
     const frontmatter = this.createFrontmatter(trade);
     
     let template = '';
@@ -85,7 +89,7 @@ export class TradeLinker {
     switch (type) {
       case 'entry':
         template = `${frontmatter}
-# ${trade.ticker} ${trade.action === 'buy' ? '買い' : '売り'}エントリー
+# ${trade.ticker} ${trade.sellDate ? 'CLOSED' : 'OPEN'}エントリー
 
 ## エントリー理由
 - 
@@ -106,7 +110,7 @@ export class TradeLinker {
         break;
       case 'exit':
         template = `${frontmatter}
-# ${trade.ticker} ${trade.action === 'buy' ? '買い' : '売り'}決済
+# ${trade.ticker} 決済
 
 ## 決済理由
 - 
@@ -132,9 +136,10 @@ export class TradeLinker {
 
 ## 概要
 - 銘柄: ${trade.ticker}
-- 取引日: ${trade.date}
+- 買い日: ${trade.buyDate}
 - 数量: ${trade.quantity}
-- 価格: $${trade.price}
+- 買い価格: $${trade.buyPrice}
+- ステータス: ${trade.sellDate ? 'CLOSED' : 'OPEN'}
 
 ## チャート分析
 - 
@@ -163,6 +168,15 @@ export class TradeLinker {
 - 
 `;
         break;
+      case 'custom':
+        template = `${frontmatter}
+# ${trade.ticker} カスタムノート
+
+## メモ
+- 
+
+`;
+        break;
     }
     
     return template;
@@ -171,11 +185,12 @@ export class TradeLinker {
   static createFrontmatter(trade: Trade): string {
     const frontmatter = [
       '---',
-      `date: ${trade.date}`,
+      `date: ${trade.buyDate}`,
       `ticker: ${trade.ticker}`,
-      `action: ${trade.action}`,
+      `status: ${trade.sellDate ? 'CLOSED' : 'OPEN'}`,
       `quantity: ${trade.quantity}`,
-      `price: ${trade.price}`,
+      `buyPrice: ${trade.buyPrice}`,
+      `sellPrice: ${trade.sellPrice || ''}`,
       trade.tags && trade.tags.length > 0 ? `tags: [${trade.tags.map(tag => `"${tag}"`).join(', ')}]` : '',
       '---',
       ''

@@ -298,7 +298,10 @@ export function TradeNotesManager({ trade, onTradeUpdate }: TradeNotesManagerPro
             {isEditing ? (
               <MarkdownEditor
                 initialContent={selectedFile.content}
-                initialMetadata={selectedFile.frontmatter}
+                initialMetadata={{
+                  ...selectedFile.frontmatter,
+                  date: selectedFile.frontmatter.date || selectedFile.frontmatter.buyDate
+                }}
                 onSave={handleSaveNote}
                 onCancel={handleCancel}
               />

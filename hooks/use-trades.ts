@@ -330,7 +330,7 @@ export function useTrades(options: UseTradesOptions = {}): UseTradesReturn {
   const stats = {
     total: trades.length,
     selected: selectedTrades.length,
-    totalValue: trades.reduce((sum, trade) => sum + (trade.quantity * trade.price), 0),
+    totalValue: trades.reduce((sum, trade) => sum + (trade.quantity * trade.buyPrice), 0),
     totalPnL: trades.reduce((sum, trade) => sum + (trade.pnl || 0), 0),
   };
   

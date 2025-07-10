@@ -7,12 +7,12 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Trade } from '@/types/trade';
 import { LocalStorage } from '@/lib/file-system/storage';
-import { TradeAnalytics } from '@/lib/analytics/trade-analytics';
+import { TradeAnalytics, TradeAnalyticsData } from '@/lib/analytics/trade-analytics';
 import { BarChart3, TrendingUp, TrendingDown, Target, DollarSign, Activity, Trophy, AlertTriangle } from 'lucide-react';
 
 export default function AnalyticsPage() {
   const [trades, setTrades] = useState<Trade[]>([]);
-  const [analytics, setAnalytics] = useState<TradeAnalytics.TradeAnalytics | null>(null);
+  const [analytics, setAnalytics] = useState<TradeAnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -312,7 +312,7 @@ export default function AnalyticsPage() {
                         <div>
                           <div className="font-medium">{trade.ticker}</div>
                           <div className="text-sm text-gray-500">
-                            {trade.action.toUpperCase()} • {trade.date}
+                            {trade.sellDate ? 'CLOSED' : 'OPEN'} • {trade.buyDate}
                           </div>
                         </div>
                       </div>
@@ -321,7 +321,7 @@ export default function AnalyticsPage() {
                           {TradeAnalytics.formatCurrency(trade.pnl || 0)}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {trade.quantity} shares @ ${trade.price}
+                          {trade.quantity} shares @ ${trade.buyPrice}
                         </div>
                       </div>
                     </div>
@@ -357,7 +357,7 @@ export default function AnalyticsPage() {
                         <div>
                           <div className="font-medium">{trade.ticker}</div>
                           <div className="text-sm text-gray-500">
-                            {trade.action.toUpperCase()} • {trade.date}
+                            {trade.sellDate ? 'CLOSED' : 'OPEN'} • {trade.buyDate}
                           </div>
                         </div>
                       </div>
@@ -366,7 +366,7 @@ export default function AnalyticsPage() {
                           {TradeAnalytics.formatCurrency(trade.pnl || 0)}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {trade.quantity} shares @ ${trade.price}
+                          {trade.quantity} shares @ ${trade.buyPrice}
                         </div>
                       </div>
                     </div>

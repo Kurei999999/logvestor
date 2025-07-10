@@ -9,6 +9,9 @@ export interface AppConfig {
   backupInterval: number;
   maxBackups: number;
   selectedTrades?: string[]; // Optional for backward compatibility
+  csvImport?: any; // Optional for CSV import configuration
+  ui?: any; // Optional for UI configuration
+  export?: any; // Optional for export configuration
 }
 
 export interface AppState {

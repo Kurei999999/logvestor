@@ -27,10 +27,11 @@ interface MarkdownEditorProps {
   initialContent?: string;
   initialMetadata?: {
     ticker: string;
-    action: 'buy' | 'sell';
+    status?: string;
     date: string;
     quantity?: number;
-    price?: number;
+    buyPrice?: number;
+    sellPrice?: number;
     tags?: string[];
   };
   onSave?: (content: string, metadata: any) => void;
@@ -46,10 +47,11 @@ export function MarkdownEditor({
   const [content, setContent] = useState(initialContent);
   const [metadata, setMetadata] = useState({
     ticker: initialMetadata?.ticker || '',
-    action: initialMetadata?.action || 'buy' as 'buy' | 'sell',
+    status: initialMetadata?.status || 'OPEN',
     date: initialMetadata?.date || new Date().toISOString().split('T')[0],
     quantity: initialMetadata?.quantity || 0,
-    price: initialMetadata?.price || 0,
+    buyPrice: initialMetadata?.buyPrice || 0,
+    sellPrice: initialMetadata?.sellPrice || 0,
     tags: initialMetadata?.tags || []
   });
   const [newTag, setNewTag] = useState('');
@@ -90,9 +92,10 @@ export function MarkdownEditor({
       '---',
       `date: ${metadata.date}`,
       `ticker: ${metadata.ticker}`,
-      `action: ${metadata.action}`,
+      `status: ${metadata.status}`,
       metadata.quantity > 0 ? `quantity: ${metadata.quantity}` : '',
-      metadata.price > 0 ? `price: ${metadata.price}` : '',
+      metadata.buyPrice > 0 ? `buyPrice: ${metadata.buyPrice}` : '',
+      metadata.sellPrice > 0 ? `sellPrice: ${metadata.sellPrice}` : '',
       metadata.tags.length > 0 ? `tags: [${metadata.tags.map(tag => `"${tag}"`).join(', ')}]` : '',
       '---',
       ''
@@ -108,7 +111,7 @@ export function MarkdownEditor({
     switch (type) {
       case 'entry':
         template = `${frontmatter}
-# ${metadata.ticker} ${metadata.action === 'buy' ? '買い' : '売り'}エントリー
+# ${metadata.ticker} ${metadata.status}エントリー
 
 ## エントリー理由
 - 
@@ -129,7 +132,7 @@ export function MarkdownEditor({
         break;
       case 'exit':
         template = `${frontmatter}
-# ${metadata.ticker} ${metadata.action === 'buy' ? '買い' : '売り'}決済
+# ${metadata.ticker} 決済
 
 ## 決済理由
 - 
@@ -197,15 +200,15 @@ export function MarkdownEditor({
                 />
               </div>
               <div>
-                <Label htmlFor="action">Action</Label>
+                <Label htmlFor="status">Status</Label>
                 <select
-                  id="action"
-                  value={metadata.action}
-                  onChange={(e) => handleMetadataChange('action', e.target.value)}
+                  id="status"
+                  value={metadata.status}
+                  onChange={(e) => handleMetadataChange('status', e.target.value)}
                   className="w-full p-2 border rounded-md"
                 >
-                  <option value="buy">Buy</option>
-                  <option value="sell">Sell</option>
+                  <option value="OPEN">Open</option>
+                  <option value="CLOSED">Closed</option>
                 </select>
               </div>
               <div>
@@ -230,15 +233,28 @@ export function MarkdownEditor({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="price">Price</Label>
+                <Label htmlFor="buyPrice">Buy Price</Label>
                 <Input
-                  id="price"
+                  id="buyPrice"
                   type="number"
                   step="0.01"
-                  value={metadata.price}
-                  onChange={(e) => handleMetadataChange('price', parseFloat(e.target.value) || 0)}
+                  value={metadata.buyPrice}
+                  onChange={(e) => handleMetadataChange('buyPrice', parseFloat(e.target.value) || 0)}
                 />
               </div>
+              <div>
+                <Label htmlFor="sellPrice">Sell Price</Label>
+                <Input
+                  id="sellPrice"
+                  type="number"
+                  step="0.01"
+                  value={metadata.sellPrice}
+                  onChange={(e) => handleMetadataChange('sellPrice', parseFloat(e.target.value) || 0)}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
               <div>
                 <Label htmlFor="tags">Tags</Label>
                 <div className="flex space-x-2">
