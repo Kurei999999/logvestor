@@ -196,9 +196,7 @@ export function TradesList({ trades, onDeleteTrade, onBulkDelete, onExportTrades
               <TableHead>Sell Price</TableHead>
               <TableHead>P&L</TableHead>
               <TableHead>Holding Days</TableHead>
-              <TableHead>Commission</TableHead>
               <TableHead>Notes</TableHead>
-              <TableHead>Tags</TableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
@@ -303,34 +301,12 @@ export function TradesList({ trades, onDeleteTrade, onBulkDelete, onExportTrades
                   )}
                 </TableCell>
                 <TableCell>
-                  {renderEditableCell(
-                    trade,
-                    'commission',
-                    trade.commission,
-                    trade.commission ? formatCurrency(trade.commission) : '-'
-                  )}
-                </TableCell>
-                <TableCell>
                   <TradeNotesDropdown
                     trade={trade}
                     onOpenMemo={onOpenMemo}
                     onNewMemo={onQuickMemo}
                     refreshTrigger={memoRefreshTrigger}
                   />
-                </TableCell>
-                <TableCell>
-                  {renderEditableCell(
-                    trade,
-                    'tags',
-                    trade.tags,
-                    <div className="flex flex-wrap gap-1">
-                      {(trade.tags || []).map((tag, index) => (
-                        <Badge key={index} variant="outline" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
                 </TableCell>
                 <TableCell>
                   <DropdownMenu>

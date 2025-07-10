@@ -10,9 +10,7 @@ export function tradesToCSVDocument(trades: Trade[]): CSVDocument {
     'buyPrice',
     'sellPrice',
     'pnl',
-    'holdingDays',
-    'commission',
-    'tags'
+    'holdingDays'
   ];
 
   // Handle empty or undefined trades array
@@ -37,9 +35,7 @@ export function tradesToCSVDocument(trades: Trade[]): CSVDocument {
       buyPrice: trade.buyPrice?.toString() || '0',
       sellPrice: trade.sellPrice?.toString() || '',
       pnl: trade.pnl?.toString() || '',
-      holdingDays: trade.holdingDays?.toString() || '',
-      commission: trade.commission?.toString() || '',
-      tags: (trade.tags || []).join(', ')
+      holdingDays: trade.holdingDays?.toString() || ''
     },
     metadata: {
       fileName: 'trades.csv',
@@ -71,12 +67,6 @@ export function csvDocumentToTrades(document: CSVDocument): Trade[] {
     const quantity = parseFloat(data.quantity) || 0;
     const buyPrice = parseFloat(data.buyPrice) || 0;
     const sellPrice = data.sellPrice ? parseFloat(data.sellPrice) : undefined;
-    const commission = data.commission ? parseFloat(data.commission) : undefined;
-    
-    // Parse tags
-    const tags = data.tags 
-      ? data.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0)
-      : [];
 
     // Auto-calculate P&L and holding days
     let pnl: number | undefined;
@@ -102,8 +92,6 @@ export function csvDocumentToTrades(document: CSVDocument): Trade[] {
       sellPrice,
       pnl,
       holdingDays,
-      commission,
-      tags,
       notesFiles: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
