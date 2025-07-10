@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { 
   MoreHorizontal, 
   Eye, 
@@ -30,10 +31,13 @@ interface TradesListProps {
   onDeleteTrade: (tradeId: string) => void;
   onBulkDelete?: (tradeIds: string[]) => void;
   onExportTrades?: (tradeIds: string[]) => void;
+  onUpdateTrade?: (tradeId: string, field: string, value: any) => void;
 }
 
-export function TradesList({ trades, onDeleteTrade, onBulkDelete, onExportTrades }: TradesListProps) {
+export function TradesList({ trades, onDeleteTrade, onBulkDelete, onExportTrades, onUpdateTrade }: TradesListProps) {
   const [selectedTrades, setSelectedTrades] = useState<string[]>([]);
+  const [editingCell, setEditingCell] = useState<{ tradeId: string; field: string } | null>(null);
+  const [editValue, setEditValue] = useState<string>('');
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -57,6 +61,88 @@ export function TradesList({ trades, onDeleteTrade, onBulkDelete, onExportTrades
     }
   };
 
+  const handleCellDoubleClick = (tradeId: string, field: string, currentValue: any) => {
+    if (!onUpdateTrade) return;
+    
+    setEditingCell({ tradeId, field });
+    
+    // Format value for editing
+    if (field === 'tags') {
+      setEditValue((currentValue as string[] || []).join(', '));
+    } else if (currentValue !== null && currentValue !== undefined) {
+      setEditValue(currentValue.toString());
+    } else {
+      setEditValue('');
+    }
+  };
+
+  const handleCellSave = () => {
+    if (!editingCell || !onUpdateTrade) return;
+
+    const { tradeId, field } = editingCell;
+    let processedValue: any = editValue;
+
+    // Process value based on field type
+    if (field === 'quantity' || field === 'buyPrice' || field === 'sellPrice' || field === 'commission') {
+      processedValue = editValue ? parseFloat(editValue) : undefined;
+    } else if (field === 'tags') {
+      processedValue = editValue
+        .split(',')
+        .map(tag => tag.trim())
+        .filter(tag => tag.length > 0);
+    } else if (field === 'buyDate' || field === 'sellDate') {
+      processedValue = editValue || undefined;
+    }
+
+    onUpdateTrade(tradeId, field, processedValue);
+    setEditingCell(null);
+    setEditValue('');
+  };
+
+  const handleCellCancel = () => {
+    setEditingCell(null);
+    setEditValue('');
+  };
+
+  const renderEditableCell = (trade: Trade, field: string, currentValue: any, displayValue: React.ReactNode) => {
+    const isEditing = editingCell?.tradeId === trade.id && editingCell?.field === field;
+    
+    if (isEditing) {
+      return (
+        <Input
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onBlur={handleCellSave}
+          onKeyPress={(e) => {
+            if (e.key === 'Enter') {
+              handleCellSave();
+            } else if (e.key === 'Escape') {
+              handleCellCancel();
+            }
+          }}
+          className="h-8 text-sm"
+          type={
+            field === 'quantity' || field === 'buyPrice' || field === 'sellPrice' || field === 'commission' 
+              ? 'number' 
+              : field === 'buyDate' || field === 'sellDate' 
+                ? 'date' 
+                : 'text'
+          }
+          autoFocus
+        />
+      );
+    }
+    
+    return (
+      <div 
+        className={onUpdateTrade ? "cursor-pointer hover:bg-gray-50 p-1 rounded" : ""}
+        onDoubleClick={() => handleCellDoubleClick(trade.id, field, currentValue)}
+      >
+        {displayValue}
+      </div>
+    );
+  };
+
   if (trades.length === 0) {
     return (
       <div className="text-center py-8">
@@ -71,7 +157,17 @@ export function TradesList({ trades, onDeleteTrade, onBulkDelete, onExportTrades
 
   return (
     <div className="space-y-4">
-      <div className="rounded-md border">
+      {onUpdateTrade && (
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+          <div className="flex items-center space-x-2">
+            <Edit className="w-4 h-4 text-blue-600" />
+            <span className="text-sm text-blue-700 font-medium">
+              Inline editing enabled - Double-click any cell to edit
+            </span>
+          </div>
+        </div>
+      )}
+      <div className="rounded-md border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -83,13 +179,16 @@ export function TradesList({ trades, onDeleteTrade, onBulkDelete, onExportTrades
                   className="rounded border-gray-300"
                 />
               </TableHead>
-              <TableHead>Date</TableHead>
+              <TableHead>Buy Date</TableHead>
+              <TableHead>Sell Date</TableHead>
               <TableHead>Ticker</TableHead>
-              <TableHead>Action</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead>Quantity</TableHead>
-              <TableHead>Price</TableHead>
-              <TableHead>Commission</TableHead>
+              <TableHead>Buy Price</TableHead>
+              <TableHead>Sell Price</TableHead>
               <TableHead>P&L</TableHead>
+              <TableHead>Holding Days</TableHead>
+              <TableHead>Commission</TableHead>
               <TableHead>Notes</TableHead>
               <TableHead>Tags</TableHead>
               <TableHead className="w-12"></TableHead>
@@ -106,39 +205,101 @@ export function TradesList({ trades, onDeleteTrade, onBulkDelete, onExportTrades
                     className="rounded border-gray-300"
                   />
                 </TableCell>
-                <TableCell className="font-medium">
-                  {formatDate(trade.date)}
+                <TableCell>
+                  {renderEditableCell(
+                    trade,
+                    'buyDate',
+                    trade.buyDate,
+                    <span className="text-sm">{formatDate(trade.buyDate)}</span>
+                  )}
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center space-x-2">
-                    <span className="font-medium">{trade.ticker}</span>
-                  </div>
+                  {renderEditableCell(
+                    trade,
+                    'sellDate',
+                    trade.sellDate,
+                    trade.sellDate ? (
+                      <span className="text-sm text-gray-600">{formatDate(trade.sellDate)}</span>
+                    ) : (
+                      <span className="text-sm text-blue-600">-</span>
+                    )
+                  )}
+                </TableCell>
+                <TableCell>
+                  {renderEditableCell(
+                    trade,
+                    'ticker',
+                    trade.ticker,
+                    <div className="flex items-center space-x-2">
+                      <span className="font-medium">{trade.ticker}</span>
+                    </div>
+                  )}
                 </TableCell>
                 <TableCell>
                   <Badge 
-                    variant={trade.action === 'buy' ? 'default' : 'secondary'}
-                    className={trade.action === 'buy' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}
+                    variant={trade.sellDate ? 'default' : 'secondary'}
+                    className={trade.sellDate ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}
                   >
-                    {trade.action === 'buy' ? (
-                      <TrendingUp className="w-3 h-3 mr-1" />
-                    ) : (
+                    {trade.sellDate ? (
                       <TrendingDown className="w-3 h-3 mr-1" />
+                    ) : (
+                      <TrendingUp className="w-3 h-3 mr-1" />
                     )}
-                    {trade.action.toUpperCase()}
+                    {trade.sellDate ? 'CLOSED' : 'OPEN'}
                   </Badge>
                 </TableCell>
-                <TableCell>{trade.quantity.toLocaleString()}</TableCell>
-                <TableCell>{formatCurrency(trade.price)}</TableCell>
                 <TableCell>
-                  {trade.commission ? formatCurrency(trade.commission) : '-'}
+                  {renderEditableCell(
+                    trade,
+                    'quantity',
+                    trade.quantity,
+                    trade.quantity.toLocaleString()
+                  )}
                 </TableCell>
                 <TableCell>
-                  {trade.pnl ? (
+                  {renderEditableCell(
+                    trade,
+                    'buyPrice',
+                    trade.buyPrice,
+                    <span className="text-sm">{formatCurrency(trade.buyPrice)}</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {renderEditableCell(
+                    trade,
+                    'sellPrice',
+                    trade.sellPrice,
+                    trade.sellPrice ? (
+                      <span className="text-sm">{formatCurrency(trade.sellPrice)}</span>
+                    ) : (
+                      <span className="text-sm text-gray-400">-</span>
+                    )
+                  )}
+                </TableCell>
+                <TableCell>
+                  {trade.pnl !== undefined ? (
                     <span className={trade.pnl >= 0 ? 'text-green-600' : 'text-red-600'}>
                       {formatCurrency(trade.pnl)}
                     </span>
                   ) : (
-                    '-'
+                    <span className="text-gray-400">-</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {trade.holdingDays !== undefined ? (
+                    <span className="text-sm text-gray-700">
+                      {trade.holdingDays} days
+                    </span>
+                  ) : (
+                    <span className="text-gray-400">-</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {renderEditableCell(
+                    trade,
+                    'commission',
+                    trade.commission,
+                    trade.commission ? formatCurrency(trade.commission) : '-'
                   )}
                 </TableCell>
                 <TableCell>
@@ -154,13 +315,18 @@ export function TradesList({ trades, onDeleteTrade, onBulkDelete, onExportTrades
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className="flex flex-wrap gap-1">
-                    {(trade.tags || []).map((tag, index) => (
-                      <Badge key={index} variant="outline" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
+                  {renderEditableCell(
+                    trade,
+                    'tags',
+                    trade.tags,
+                    <div className="flex flex-wrap gap-1">
+                      {(trade.tags || []).map((tag, index) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </TableCell>
                 <TableCell>
                   <DropdownMenu>

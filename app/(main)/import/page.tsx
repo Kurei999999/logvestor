@@ -50,7 +50,7 @@ export default function ImportPage() {
             <CardHeader>
               <CardTitle>CSV File Import</CardTitle>
               <CardDescription>
-                Upload your trading data CSV file. The system will automatically detect columns and apply appropriate mappings.
+                Upload your trading data CSV file. Each row should represent a complete trade with buy information (required) and sell information (optional for open positions).
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -70,20 +70,24 @@ export default function ImportPage() {
                 <div>
                   <h4 className="font-medium text-sm mb-2">Required Columns:</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Date (trade date)</li>
+                    <li>• Buy Date (when position was opened)</li>
                     <li>• Ticker (stock symbol)</li>
-                    <li>• Action (buy/sell)</li>
+                    <li>• Buy Price (purchase price per share)</li>
                     <li>• Quantity (number of shares)</li>
-                    <li>• Price (per share)</li>
                   </ul>
                 </div>
                 <div>
                   <h4 className="font-medium text-sm mb-2">Optional Columns:</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
+                    <li>• Sell Date (when position was closed)</li>
+                    <li>• Sell Price (sale price per share)</li>
                     <li>• Commission (trading fees)</li>
-                    <li>• P&L (profit/loss)</li>
-                    <li>• Notes (additional information)</li>
                   </ul>
+                  <div className="mt-3 p-2 bg-blue-50 rounded-md">
+                    <p className="text-xs text-blue-700">
+                      <strong>Auto-calculated:</strong> P&L and holding period are automatically calculated when both buy and sell information is provided.
+                    </p>
+                  </div>
                 </div>
               </div>
             </CardContent>

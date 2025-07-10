@@ -12,7 +12,8 @@ import {
   Upload,
   FileText,
   Menu,
-  X
+  X,
+  Table
 } from 'lucide-react';
 
 const navigation = [
@@ -20,6 +21,7 @@ const navigation = [
   { name: 'Trades', href: '/trades', icon: TrendingUp },
   { name: 'Gallery', href: '/gallery', icon: Images },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
+  { name: 'CSV Viewer', href: '/csv-viewer', icon: Table },
   { name: 'Import', href: '/import', icon: Upload },
 ];
 

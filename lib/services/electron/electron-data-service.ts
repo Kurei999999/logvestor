@@ -264,7 +264,10 @@ export class ElectronDataService implements IDataService {
       if (response.success) {
         return ErrorHandler.createSuccessResponse(true);
       }
-      return response as ServiceResponse<boolean>;
+      return {
+        success: false,
+        error: response.error
+      } as ServiceResponse<boolean>;
     });
   }
 

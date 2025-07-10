@@ -171,13 +171,13 @@ export function CSVImporter() {
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="date-mapping">Date Column</Label>
+                  <Label htmlFor="buy-date-mapping">Buy Date Column</Label>
                   <Select
-                    value={mapping.columnMapping.date}
-                    onValueChange={(value) => handleMappingChange('date', value)}
+                    value={mapping.columnMapping.buyDate}
+                    onValueChange={(value) => handleMappingChange('buyDate', value)}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select date column" />
+                      <SelectValue placeholder="Select buy date column" />
                     </SelectTrigger>
                     <SelectContent>
                       {csvData.headers.map((header) => (
@@ -209,25 +209,6 @@ export function CSVImporter() {
                 </div>
 
                 <div>
-                  <Label htmlFor="action-mapping">Action Column</Label>
-                  <Select
-                    value={mapping.columnMapping.action}
-                    onValueChange={(value) => handleMappingChange('action', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select action column" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {csvData.headers.map((header) => (
-                        <SelectItem key={header} value={header}>
-                          {header}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
                   <Label htmlFor="quantity-mapping">Quantity Column</Label>
                   <Select
                     value={mapping.columnMapping.quantity}
@@ -247,15 +228,55 @@ export function CSVImporter() {
                 </div>
 
                 <div>
-                  <Label htmlFor="price-mapping">Price Column</Label>
+                  <Label htmlFor="buy-price-mapping">Buy Price Column</Label>
                   <Select
-                    value={mapping.columnMapping.price}
-                    onValueChange={(value) => handleMappingChange('price', value)}
+                    value={mapping.columnMapping.buyPrice}
+                    onValueChange={(value) => handleMappingChange('buyPrice', value)}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select price column" />
+                      <SelectValue placeholder="Select buy price column" />
                     </SelectTrigger>
                     <SelectContent>
+                      {csvData.headers.map((header) => (
+                        <SelectItem key={header} value={header}>
+                          {header}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="sell-date-mapping">Sell Date Column (Optional)</Label>
+                  <Select
+                    value={mapping.columnMapping.sellDate}
+                    onValueChange={(value) => handleMappingChange('sellDate', value === '__none__' ? '' : value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select sell date column" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">None (Optional)</SelectItem>
+                      {csvData.headers.map((header) => (
+                        <SelectItem key={header} value={header}>
+                          {header}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="sell-price-mapping">Sell Price Column (Optional)</Label>
+                  <Select
+                    value={mapping.columnMapping.sellPrice}
+                    onValueChange={(value) => handleMappingChange('sellPrice', value === '__none__' ? '' : value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select sell price column" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">None (Optional)</SelectItem>
                       {csvData.headers.map((header) => (
                         <SelectItem key={header} value={header}>
                           {header}
@@ -343,26 +364,26 @@ export function CSVImporter() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Date</TableHead>
+                        <TableHead>Buy Date</TableHead>
                         <TableHead>Ticker</TableHead>
-                        <TableHead>Action</TableHead>
+                        <TableHead>Status</TableHead>
                         <TableHead>Quantity</TableHead>
-                        <TableHead>Price</TableHead>
+                        <TableHead>Buy Price</TableHead>
                         <TableHead>P&L</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {importResult.trades.slice(0, 5).map((trade) => (
                         <TableRow key={trade.id}>
-                          <TableCell>{trade.date}</TableCell>
+                          <TableCell>{trade.buyDate}</TableCell>
                           <TableCell>{trade.ticker}</TableCell>
-                          <TableCell className={trade.action === 'buy' ? 'text-green-600' : 'text-red-600'}>
-                            {trade.action.toUpperCase()}
+                          <TableCell className={trade.sellDate ? 'text-green-600' : 'text-blue-600'}>
+                            {trade.sellDate ? 'CLOSED' : 'OPEN'}
                           </TableCell>
                           <TableCell>{trade.quantity}</TableCell>
-                          <TableCell>${trade.price.toFixed(2)}</TableCell>
+                          <TableCell>${trade.buyPrice.toFixed(2)}</TableCell>
                           <TableCell>
-                            {trade.pnl ? `$${trade.pnl.toFixed(2)}` : '-'}
+                            {trade.pnl !== undefined ? `$${trade.pnl.toFixed(2)}` : '-'}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -425,6 +446,9 @@ export function CSVImporter() {
               <div className="flex space-x-4">
                 <Button asChild>
                   <a href="/trades">View Trades</a>
+                </Button>
+                <Button asChild variant="outline">
+                  <a href="/trades/edit">Edit Trades</a>
                 </Button>
                 <Button variant="outline" onClick={handleReset}>
                   Import More Data

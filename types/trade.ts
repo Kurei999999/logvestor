@@ -1,12 +1,14 @@
 export interface Trade {
   id: string;
-  date: string;
   ticker: string;
-  action: 'buy' | 'sell';
+  buyDate: string;
+  buyPrice: number;
   quantity: number;
-  price: number;
+  sellDate?: string;
+  sellPrice?: number;
+  pnl?: number; // Auto-calculated: (sellPrice - buyPrice) * quantity
+  holdingDays?: number; // Auto-calculated: days between buyDate and sellDate
   commission?: number;
-  pnl?: number;
   tags?: string[];
   notesFiles?: string[];
   createdAt: string;
@@ -20,11 +22,12 @@ export interface TradeMarkdown {
   filePath: string;
   content: string;
   frontmatter: {
-    date: string;
+    buyDate: string;
     ticker: string;
-    action: 'buy' | 'sell';
     quantity?: number;
-    price?: number;
+    buyPrice?: number;
+    sellDate?: string;
+    sellPrice?: number;
     tags?: string[];
     [key: string]: any;
   };
