@@ -38,7 +38,7 @@ export default function TradesPage() {
   const [filters, setFilters] = useState<ITradeFilters>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState<'date' | 'ticker' | 'pnl' | 'quantity' | 'price' | 'commission'>('date');
+  const [sortBy, setSortBy] = useState<'date' | 'ticker' | 'pnl' | 'quantity' | 'price'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<'table' | 'csv'>('table');
@@ -168,10 +168,6 @@ export default function TradesPage() {
         case 'price':
           aValue = a.buyPrice;
           bValue = b.buyPrice;
-          break;
-        case 'commission':
-          aValue = a.commission || 0;
-          bValue = b.commission || 0;
           break;
       }
 
@@ -380,7 +376,7 @@ export default function TradesPage() {
             />
           </div>
           
-          <Select value={sortBy} onValueChange={(value: 'date' | 'ticker' | 'pnl' | 'quantity' | 'price' | 'commission') => setSortBy(value)}>
+          <Select value={sortBy} onValueChange={(value: 'date' | 'ticker' | 'pnl' | 'quantity' | 'price') => setSortBy(value)}>
             <SelectTrigger className="w-32 border-0 bg-gray-50">
               <SelectValue />
             </SelectTrigger>

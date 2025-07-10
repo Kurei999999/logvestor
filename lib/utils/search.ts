@@ -13,22 +13,11 @@ export function searchTrades(trades: Trade[], searchTerm: string): Trade[] {
       return true;
     }
     
-    // Search in tags
-    if (trade.tags?.some(tag => tag.toLowerCase().includes(normalizedSearch))) {
-      return true;
-    }
-    
-    // Search in ticker
-    if (trade.ticker?.toLowerCase().includes(normalizedSearch)) {
-      return true;
-    }
-    
     // Search in numeric fields (convert to string for comparison)
     const numericFields = [
       trade.quantity?.toString() || '',
       trade.buyPrice?.toString() || '',
       trade.sellPrice?.toString() || '',
-      trade.commission?.toString() || '',
       trade.pnl?.toString() || '',
     ];
     

@@ -38,9 +38,7 @@ export function TradesTable({
     { key: 'sellDate', label: 'Sell Date', type: 'date' },
     { key: 'sellPrice', label: 'Sell Price', type: 'number' },
     { key: 'pnl', label: 'P&L', type: 'number', readonly: true },
-    { key: 'holdingDays', label: 'Holding Days', type: 'number', readonly: true },
-    { key: 'commission', label: 'Commission', type: 'number' },
-    { key: 'tags', label: 'Tags', type: 'tags' }
+    { key: 'holdingDays', label: 'Holding Days', type: 'number', readonly: true }
   ];
 
   const sortedTrades = useMemo(() => {
