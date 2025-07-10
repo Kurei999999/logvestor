@@ -41,9 +41,11 @@ npm run electron-build
 The application follows a local-first architecture with these key concepts:
 
 ### Data Management
-- **Local File System**: All data stored in user's local directories (e.g., `~/Documents/TradeJournal/`)
+- **Local File System**: All data stored in user's local directories (default: `~/TradeJournal/`)
+- **Date-based Folder Structure**: `trades/{year}/{ticker}_{MM-DD}_{sequence}/` with automatic sequence numbering
 - **Markdown Files**: Trade records stored as markdown files with frontmatter
 - **CSV Integration**: Portfolio data managed via CSV files with custom mapping support
+- **Central CSV Management**: Single `trades.csv` file for unified analytics data
 - **Image Storage**: Chart images stored alongside markdown files in organized folders
 
 ### Core Features
@@ -66,7 +68,8 @@ app/
 │   ├── gallery/       # Image gallery views
 │   ├── analytics/     # Analysis and reporting
 │   ├── csv-viewer/    # CSV viewer/editor (implemented)
-│   └── import/        # CSV import functionality
+│   ├── import/        # CSV import functionality
+│   └── settings/      # Settings and migration tools (NEW)
 └── api/               # Electron IPC communication
 
 components/
@@ -75,11 +78,22 @@ components/
 ├── gallery/           # Gallery components
 ├── analytics/         # Analytics components
 ├── csv-viewer/        # CSV viewer components (implemented)
-└── markdown/          # Markdown editor components (implemented)
+├── markdown/          # Markdown editor components (implemented)
+└── migration/         # Migration tools components (NEW)
 
 lib/
 ├── file-system/       # File operations
 │   └── csv-storage.ts # CSV document storage (implemented)
+├── trade-folder/      # Trade folder management
+│   └── path-generator.ts # Date-based folder structure with sequence numbers
+├── csv/               # CSV management
+│   └── central-csv-service.ts # Centralized CSV management
+├── services/          # Application services (NEW)
+│   └── trade-data-service.ts # Unified trade data management
+├── hooks/             # React hooks (NEW)
+│   └── use-trade-data.ts # Trade data management hook
+├── migration/         # Data migration tools (NEW)
+│   └── data-migration-service.ts # Migration, validation, and cleanup utilities
 ├── parsers/           # CSV/Excel/MD parsing
 ├── csv-mapper/        # CSV mapping logic
 ├── trade-linker/      # CSV-MD linking
@@ -152,6 +166,9 @@ Based on completed GitHub issues:
 - **CSV Viewer/Editor** (#15): Flexible CSV data management without mapping requirements
 - **Enhanced Trade Import** (#16): フォーマット準拠 + カスタムカラム統合 (completed)
 - **Markdown Memo Integration** (#19): Local file-based trade notes system with VSCode-like editing
+
+### Phase 5 Completed:
+- **Trade Data Structure Restructuring** (#21): Complete date-based folder hierarchy with central CSV management
 
 ### Currently Open:
 - **Export and Backup Functionality** (#3): In progress
@@ -239,3 +256,38 @@ Local file-based trade notes system with VSCode-like editing experience.
 - Direct file system read/write operations
 - Support for multiple markdown files per trade
 - Real-time file listing updates
+
+### Trade Data Structure Restructuring (✅ COMPLETE - Issue #21)
+Major reorganization of folder structure and data management approach.
+
+**Implementation**: Date-based hierarchy with sequence numbers and central CSV management
+- **Folder Structure Change**: From `TradeJournal/trades/stock/memos` to `trades/{year}/{ticker}_{MM-DD}_{sequence}/`
+- **Directory Location**: Changed from `~/Documents/TradeJournal` to `~/TradeJournal` (home directory root)
+- **Sequence Number System**: Automatic assignment for multiple trades of same ticker on same day (001, 002, 003)
+- **Path Generator Library**: New utilities for folder creation and management
+- **Central CSV Service**: Unified `trades.csv` file management system
+- **Trade Data Service**: Bridge between central CSV and application layer
+- **React Hook Integration**: `useTradeData` hook for seamless component integration
+- **Automatic Migration**: LocalStorage to central CSV migration system
+- **Migration Tools**: Complete data migration, validation, and cleanup utilities
+- **Settings Page**: User-friendly interface for data management
+- **Component Updates**: TradeNotesDropdown and MarkdownSideEditor adapted for new structure
+
+**Key Features:**
+- Year-based folder organization with clean naming: `AAPL_01-15_001`
+- Dynamic path resolution using config.dataDirectory (user-portable)
+- Auto-creation of folder structure with sequence assignment
+- Backward compatibility with existing folder patterns
+- TypeScript type safety with proper interface definitions
+- Real-time folder scanning and memo file detection
+- **Central CSV Management**: Single source of truth for all trade data
+- **Error Handling**: LocalStorage fallback with graceful degradation
+- **Automatic Sync**: Seamless migration from old to new data format
+- **Data Validation**: Integrity checking and repair tools
+- **Backup System**: Automatic backup creation before migrations
+
+**All Phases Complete:**
+- ✅ Phase 1: Folder structure design and implementation
+- ✅ Phase 2: Central CSV integration and unified data layer
+- ✅ Phase 3: Component integration with new structure
+- ✅ Phase 4: Data migration tools, validation, and cleanup utilities

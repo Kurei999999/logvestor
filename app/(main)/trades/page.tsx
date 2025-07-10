@@ -14,12 +14,26 @@ import { TradeFilters as ITradeFilters } from '@/types/app';
 import { LocalStorage } from '@/lib/file-system/storage';
 import { searchTrades } from '@/lib/utils/search';
 import { debounce } from '@/lib/utils/debounce';
-import { Plus, Search, Filter, Edit3, FileText, TrendingUp, TrendingDown, Calendar, DollarSign, PenTool, MoreHorizontal } from 'lucide-react';
+import { useTradeData } from '@/lib/hooks/use-trade-data';
+import { Plus, Search, Filter, Edit3, FileText, TrendingUp, TrendingDown, Calendar, DollarSign, PenTool, MoreHorizontal, Loader2 } from 'lucide-react';
 import { MarkdownSideEditorV2 as MarkdownSideEditor } from '@/components/markdown/markdown-side-editor-v2';
 import Link from 'next/link';
 
 export default function TradesPage() {
-  const [trades, setTrades] = useState<Trade[]>([]);
+  // Use the new unified trade data hook
+  const {
+    trades,
+    loading,
+    error,
+    addTrade,
+    updateTrade,
+    deleteTrade,
+    bulkDeleteTrades,
+    refreshTrades,
+    exportTrades,
+    stats
+  } = useTradeData();
+
   const [filteredTrades, setFilteredTrades] = useState<Trade[]>([]);
   const [filters, setFilters] = useState<ITradeFilters>({});
   const [searchTerm, setSearchTerm] = useState('');
@@ -33,12 +47,6 @@ export default function TradesPage() {
   const [selectedFolderPath, setSelectedFolderPath] = useState<string | null>(null);
   const [showMarkdownEditor, setShowMarkdownEditor] = useState(false);
   const [memoRefreshTrigger, setMemoRefreshTrigger] = useState(0);
-
-  useEffect(() => {
-    const loadedTrades = LocalStorage.loadTrades();
-    setTrades(loadedTrades);
-    setFilteredTrades(loadedTrades);
-  }, []);
 
   // Debounced search handler
   const debouncedSearch = useMemo(
@@ -181,106 +189,61 @@ export default function TradesPage() {
     setFilters(newFilters);
   };
 
-  const handleDeleteTrade = (tradeId: string) => {
-    const updatedTrades = trades.filter(trade => trade.id !== tradeId);
-    setTrades(updatedTrades);
-    LocalStorage.saveTrades(updatedTrades);
+  const handleDeleteTrade = async (tradeId: string) => {
+    const success = await deleteTrade(tradeId, false); // Don't delete folder by default
+    if (!success) {
+      alert('Failed to delete trade. Please try again.');
+    }
   };
 
-  const handleBulkDelete = (tradeIds: string[]) => {
-    const updatedTrades = trades.filter(trade => !tradeIds.includes(trade.id));
-    setTrades(updatedTrades);
-    LocalStorage.saveTrades(updatedTrades);
+  const handleBulkDelete = async (tradeIds: string[]) => {
+    const success = await bulkDeleteTrades(tradeIds, false); // Don't delete folders by default
+    if (!success) {
+      alert('Failed to delete trades. Please try again.');
+    }
   };
 
-  const handleExportTrades = (tradeIds: string[]) => {
-    const tradesToExport = trades.filter(trade => tradeIds.includes(trade.id));
-    const csv = convertTradesToCSV(tradesToExport);
-    downloadCSV(csv, `trades-export-${new Date().toISOString().split('T')[0]}.csv`);
+  const handleExportTrades = async (tradeIds: string[]) => {
+    const csv = await exportTrades(tradeIds);
+    if (csv) {
+      downloadCSV(csv, `trades-export-${new Date().toISOString().split('T')[0]}.csv`);
+    } else {
+      alert('Failed to export trades. Please try again.');
+    }
   };
 
-  const handleUpdateTrade = (tradeId: string, field: string, value: any) => {
-    const updatedTrades = trades.map(trade => {
-      if (trade.id === tradeId) {
-        const updatedTrade = { ...trade, [field]: value, updatedAt: new Date().toISOString() };
-        
-        // Auto-calculate P&L and holding days
-        if (field === 'sellPrice' || field === 'buyPrice' || field === 'quantity') {
-          if (updatedTrade.sellPrice && updatedTrade.buyPrice && updatedTrade.quantity) {
-            updatedTrade.pnl = (updatedTrade.sellPrice - updatedTrade.buyPrice) * updatedTrade.quantity;
-          }
-        }
-        
-        if (field === 'sellDate' || field === 'buyDate') {
-          if (updatedTrade.sellDate && updatedTrade.buyDate) {
-            const buyDate = new Date(updatedTrade.buyDate);
-            const sellDate = new Date(updatedTrade.sellDate);
-            updatedTrade.holdingDays = Math.ceil((sellDate.getTime() - buyDate.getTime()) / (1000 * 60 * 60 * 24));
-          }
-        }
-        
-        return updatedTrade;
-      }
-      return trade;
-    });
-    
-    setTrades(updatedTrades);
-    LocalStorage.saveTrades(updatedTrades);
+  const handleUpdateTrade = async (tradeId: string, field: string, value: any) => {
+    const updates = { [field]: value };
+    const success = await updateTrade(tradeId, updates);
+    if (!success) {
+      alert('Failed to update trade. Please try again.');
+    }
   };
 
   // CSV Table handlers
-  const handleCSVUpdateCell = (recordId: string, columnName: string, value: any) => {
-    const csvDocument = tradesToCSVDocument(filteredTrades || []);
-    const updatedRecords = csvDocument.records.map(record => {
-      if (record.id === recordId) {
-        return {
-          ...record,
-          rowData: {
-            ...record.rowData,
-            [columnName]: value
-          }
-        };
-      }
-      return record;
-    });
-
-    const updatedDocument = {
-      ...csvDocument,
-      records: updatedRecords
-    };
-
-    const updatedTrades = csvDocumentToTrades(updatedDocument);
-    
-    // Update the main trades array
-    const newTrades = trades.map(trade => {
-      const updatedTrade = updatedTrades.find(t => t.id === trade.id);
-      return updatedTrade || trade;
-    });
-
-    setTrades(newTrades);
-    LocalStorage.saveTrades(newTrades);
+  const handleCSVUpdateCell = async (recordId: string, columnName: string, value: any) => {
+    const updates = { [columnName]: value };
+    await handleUpdateTrade(recordId, columnName, value);
   };
 
-  const handleCSVAddRow = () => {
-    const newTrade: Trade = {
-      id: `trade-${Date.now()}`,
+  const handleCSVAddRow = async () => {
+    const newTrade = {
       buyDate: new Date().toISOString().split('T')[0],
       ticker: '',
       quantity: 0,
       buyPrice: 0,
       tags: [],
-      notesFiles: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      notesFiles: []
     };
 
-    const newTrades = [...trades, newTrade];
-    setTrades(newTrades);
-    LocalStorage.saveTrades(newTrades);
+    const result = await addTrade(newTrade);
+    if (!result) {
+      alert('Failed to add new trade. Please try again.');
+    }
   };
 
-  const handleCSVDeleteRow = (recordId: string) => {
-    handleDeleteTrade(recordId);
+  const handleCSVDeleteRow = async (recordId: string) => {
+    await handleDeleteTrade(recordId);
   };
 
   const handleCSVAddColumn = (columnName: string) => {
@@ -326,6 +289,7 @@ export default function TradesPage() {
     document.body.removeChild(link);
   };
 
+  // Use stats from the hook, but apply to filtered trades for display
   const totalPnL = filteredTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0);
   const totalTrades = filteredTrades.length;
   const winningTrades = filteredTrades.filter(trade => (trade.pnl || 0) > 0).length;
@@ -345,8 +309,29 @@ export default function TradesPage() {
     setShowMarkdownEditor(true);
   };
 
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Loading trades...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Error banner */}
+      {error && (
+        <div className="bg-red-50 border-b border-red-200 px-6 py-3">
+          <p className="text-red-800 text-sm">
+            Error: {error}. Using local data as fallback.
+          </p>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
@@ -354,6 +339,7 @@ export default function TradesPage() {
             <h1 className="text-2xl font-semibold text-gray-900">Trade Journal</h1>
             <p className="text-gray-600 text-sm mt-1">
               {totalTrades} trades • {winRate}% win rate • ${totalPnL.toFixed(2)} total P&L
+              {error && <span className="ml-2 text-orange-600">(Local data)</span>}
             </p>
           </div>
           <div className="flex gap-3">
@@ -469,10 +455,8 @@ export default function TradesPage() {
             setSelectedFolderPath(null);
           }}
           onSave={async () => {
-            // Reload trades to update notes files
-            const loadedTrades = LocalStorage.loadTrades();
-            setTrades(loadedTrades);
-            setFilteredTrades(loadedTrades);
+            // Refresh trades to update notes files from central CSV
+            await refreshTrades();
             
             // Trigger memo dropdown refresh
             setMemoRefreshTrigger(prev => prev + 1);

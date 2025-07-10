@@ -7,13 +7,16 @@ import { Trade } from '@/types/trade';
 
 export interface CentralCSVRecord {
   tradeId: string;
-  date: string; // YYYY-MM-DD
   ticker: string;
-  action: 'buy' | 'sell';
+  buyDate: string; // YYYY-MM-DD
+  sellDate?: string; // YYYY-MM-DD
   quantity: number;
-  price: number;
+  buyPrice: number;
+  sellPrice?: number;
   commission: number;
   pnl?: number;
+  holdingDays?: number;
+  tags: string; // Comma-separated tags
   folderPath: string; // Relative path to trade folder
   createdAt: string; // ISO timestamp
   updatedAt: string; // ISO timestamp
@@ -48,13 +51,16 @@ export class CentralCSVService {
       // Create CSV with headers
       const headers = [
         'tradeId',
-        'date',
-        'ticker', 
-        'action',
+        'ticker',
+        'buyDate',
+        'sellDate',
         'quantity',
-        'price',
+        'buyPrice',
+        'sellPrice',
         'commission',
         'pnl',
+        'holdingDays',
+        'tags',
         'folderPath',
         'createdAt',
         'updatedAt'
@@ -79,7 +85,7 @@ export class CentralCSVService {
         return [];
       }
       
-      const lines = result.data.split('\n').filter(line => line.trim());
+      const lines = result.data.split('\n').filter((line: string) => line.trim());
       if (lines.length <= 1) {
         return []; // Only headers or empty
       }
@@ -92,16 +98,19 @@ export class CentralCSVService {
         if (values.length >= headers.length) {
           const record: CentralCSVRecord = {
             tradeId: values[0],
-            date: values[1],
-            ticker: values[2],
-            action: values[3] as 'buy' | 'sell',
+            ticker: values[1],
+            buyDate: values[2],
+            sellDate: values[3] || undefined,
             quantity: parseFloat(values[4]) || 0,
-            price: parseFloat(values[5]) || 0,
-            commission: parseFloat(values[6]) || 0,
-            pnl: values[7] ? parseFloat(values[7]) : undefined,
-            folderPath: values[8],
-            createdAt: values[9],
-            updatedAt: values[10]
+            buyPrice: parseFloat(values[5]) || 0,
+            sellPrice: values[6] ? parseFloat(values[6]) : undefined,
+            commission: parseFloat(values[7]) || 0,
+            pnl: values[8] ? parseFloat(values[8]) : undefined,
+            holdingDays: values[9] ? parseInt(values[9]) : undefined,
+            tags: values[10] || '',
+            folderPath: values[11],
+            createdAt: values[12],
+            updatedAt: values[13]
           };
           records.push(record);
         }
@@ -203,7 +212,7 @@ export class CentralCSVService {
    */
   async getRecordsForDateRange(startDate: string, endDate: string): Promise<CentralCSVRecord[]> {
     const records = await this.readAllRecords();
-    return records.filter(r => r.date >= startDate && r.date <= endDate);
+    return records.filter(r => r.buyDate >= startDate && r.buyDate <= endDate);
   }
   
   /**
@@ -212,13 +221,16 @@ export class CentralCSVService {
   static tradeToCSVRecord(trade: Trade, folderPath: string): Omit<CentralCSVRecord, 'createdAt' | 'updatedAt'> {
     return {
       tradeId: trade.id,
-      date: trade.buyDate,
       ticker: trade.ticker,
-      action: 'buy', // Could be extended to support both buy/sell
+      buyDate: trade.buyDate,
+      sellDate: trade.sellDate,
       quantity: trade.quantity,
-      price: trade.buyPrice,
+      buyPrice: trade.buyPrice,
+      sellPrice: trade.sellPrice,
       commission: trade.commission || 0,
       pnl: trade.pnl,
+      holdingDays: trade.holdingDays,
+      tags: (trade.tags || []).join(','),
       folderPath
     };
   }
@@ -226,19 +238,128 @@ export class CentralCSVService {
   /**
    * Convert CentralCSVRecord to Trade type
    */
-  static csvRecordToTrade(record: CentralCSVRecord): Partial<Trade> {
+  static csvRecordToTrade(record: CentralCSVRecord): Trade {
     return {
       id: record.tradeId,
       ticker: record.ticker,
-      buyDate: record.date,
+      buyDate: record.buyDate,
+      sellDate: record.sellDate,
       quantity: record.quantity,
-      buyPrice: record.price,
+      buyPrice: record.buyPrice,
+      sellPrice: record.sellPrice,
       commission: record.commission,
       pnl: record.pnl,
-      notesFiles: [] // Will be populated by scanning folder
+      holdingDays: record.holdingDays,
+      tags: record.tags ? record.tags.split(',').filter(tag => tag.trim()) : [],
+      notesFiles: [], // Will be populated by scanning folder
+      createdAt: record.createdAt,
+      updatedAt: record.updatedAt
     };
   }
   
+  /**
+   * Delete a record from central CSV
+   */
+  async deleteRecord(tradeId: string): Promise<boolean> {
+    try {
+      const records = await this.readAllRecords();
+      const filteredRecords = records.filter(r => r.tradeId !== tradeId);
+      
+      if (filteredRecords.length === records.length) {
+        console.warn('Trade ID not found for deletion:', tradeId);
+        return false;
+      }
+      
+      return await this.writeAllRecords(filteredRecords);
+    } catch (error) {
+      console.error('Error deleting record:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Bulk delete records
+   */
+  async deleteRecords(tradeIds: string[]): Promise<boolean> {
+    try {
+      const records = await this.readAllRecords();
+      const filteredRecords = records.filter(r => !tradeIds.includes(r.tradeId));
+      
+      return await this.writeAllRecords(filteredRecords);
+    } catch (error) {
+      console.error('Error bulk deleting records:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Convert all trades from LocalStorage and sync to central CSV
+   */
+  async syncFromTrades(trades: Trade[], basePath: string = ''): Promise<boolean> {
+    try {
+      // Clear existing records
+      await this.initializeCentralCSV();
+      
+      const records: CentralCSVRecord[] = [];
+      
+      for (const trade of trades) {
+        // Generate folder path using trade folder structure
+        const year = trade.buyDate.split('-')[0];
+        const monthDay = trade.buyDate.substring(5);
+        const folderPath = `trades/${year}/${trade.ticker}_${monthDay}_001`; // Default sequence
+        
+        const record: CentralCSVRecord = {
+          ...CentralCSVService.tradeToCSVRecord(trade, folderPath),
+          createdAt: trade.createdAt || new Date().toISOString(),
+          updatedAt: trade.updatedAt || new Date().toISOString()
+        };
+        
+        records.push(record);
+      }
+      
+      return await this.writeAllRecords(records);
+    } catch (error) {
+      console.error('Error syncing trades to central CSV:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Load all trades from central CSV and populate notes files by scanning folders
+   */
+  async loadAllTrades(fileService: any, basePath: string = ''): Promise<Trade[]> {
+    try {
+      const records = await this.readAllRecords();
+      const trades: Trade[] = [];
+      
+      for (const record of records) {
+        const trade = CentralCSVService.csvRecordToTrade(record);
+        
+        // Scan folder for memo files
+        const fullFolderPath = basePath ? `${basePath}/${record.folderPath}` : record.folderPath;
+        try {
+          const folderResult = await fileService.readDir(fullFolderPath);
+          if (folderResult.success && folderResult.data) {
+            const memoFiles = folderResult.data
+              .filter((item: any) => item.type === 'file' && item.name.endsWith('.md'))
+              .map((item: any) => `${record.folderPath}/${item.name}`);
+            trade.notesFiles = memoFiles;
+          }
+        } catch (error) {
+          console.log(`Folder not found for trade ${trade.id}:`, fullFolderPath);
+          trade.notesFiles = [];
+        }
+        
+        trades.push(trade);
+      }
+      
+      return trades;
+    } catch (error) {
+      console.error('Error loading trades from central CSV:', error);
+      return [];
+    }
+  }
+
   /**
    * Generate unique trade ID
    */
@@ -275,13 +396,16 @@ export class CentralCSVService {
   private recordToCSVLine(record: CentralCSVRecord): string {
     const values = [
       record.tradeId,
-      record.date,
       record.ticker,
-      record.action,
+      record.buyDate,
+      record.sellDate || '',
       record.quantity.toString(),
-      record.price.toString(),
+      record.buyPrice.toString(),
+      record.sellPrice?.toString() || '',
       record.commission.toString(),
       record.pnl?.toString() || '',
+      record.holdingDays?.toString() || '',
+      record.tags || '',
       record.folderPath,
       record.createdAt,
       record.updatedAt
@@ -300,13 +424,16 @@ export class CentralCSVService {
     try {
       const headers = [
         'tradeId',
-        'date', 
         'ticker',
-        'action',
+        'buyDate',
+        'sellDate',
         'quantity',
-        'price',
+        'buyPrice',
+        'sellPrice',
         'commission',
         'pnl',
+        'holdingDays',
+        'tags',
         'folderPath',
         'createdAt',
         'updatedAt'

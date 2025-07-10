@@ -80,27 +80,30 @@ trade-journal-local/
     └── csv-viewer.ts      # CSVビューア型定義 ✅ 実装済み
 ```
 
-### 3.2 ユーザーデータ構造（推奨）
+### 3.2 ユーザーデータ構造（2024年1月更新 - Issue #21対応）
 
 ```
-~/Documents/TradeJournal/  # ユーザーが変更可能
+~/TradeJournal/            # デフォルト保存場所（ユーザーが変更可能）
+├── trades.csv             # 統合取引データ（分析用）
 ├── trades/
-│   ├── 2024/
-│   │   ├── 01/
-│   │   │   ├── T001_AAPL_買い/
-│   │   │   │   ├── entry_analysis.md
-│   │   │   │   ├── technical_memo.md
-│   │   │   │   ├── followup_20240116.md
-│   │   │   │   └── images/
-│   │   │   │       ├── chart_entry_1.png
-│   │   │   │       ├── chart_entry_2.png
-│   │   │   │       └── pattern_analysis.png
-│   │   │   └── T002_AAPL_売り/
-│   │   │       ├── exit_analysis.md
-│   │   │       ├── reflection.md
-│   │   │       └── images/
-│   │   └── 02/
-│   └── 2025/
+│   ├── 2024/              # 年別フォルダ
+│   │   ├── AAPL_01-15_001/     # {ticker}_{MM-DD}_{sequence}
+│   │   │   ├── entry_analysis.md
+│   │   │   ├── technical_memo.md
+│   │   │   ├── followup_notes.md
+│   │   │   └── images/
+│   │   │       ├── chart_entry_1.png
+│   │   │       ├── chart_entry_2.png
+│   │   │       └── pattern_analysis.png
+│   │   ├── AAPL_01-15_002/     # 同日の2回目の取引
+│   │   │   ├── exit_analysis.md
+│   │   │   ├── reflection.md
+│   │   │   └── images/
+│   │   └── MSFT_02-01_001/
+│   │       ├── swing_trade.md
+│   │       └── images/
+│   └── 2025/              # 年が変わると新しいフォルダ
+│       └── AAPL_01-03_001/
 ├── portfolio/
 │   ├── positions.csv      # 現在のポジション
 │   ├── history.csv        # 取引履歴
@@ -111,6 +114,13 @@ trade-journal-local/
 │   └── analysis.md        # 分析テンプレート
 └── .tradejournalrc        # アプリ設定ファイル
 ```
+
+**主な変更点（Issue #21）:**
+- 保存場所: `~/Documents/TradeJournal/` → `~/TradeJournal/`
+- フォルダ構造: 年別管理で月/日フォルダ廃止
+- 命名規則: `{ticker}_{MM-DD}_{sequence}` (例: `AAPL_01-15_001`)
+- 連番システム: 同一銘柄・同日の複数取引に自動採番
+- 統合CSV: `trades.csv` で全取引データを一元管理
 
 ## 4. 機能詳細
 
@@ -379,6 +389,26 @@ T002,2024-01-20,AAPL,sell,100,190.00,10.00,430.00,"trades/2024/01/T002_AAPL_売�
 - [x] VSCode-like自動リロード機能
 - [x] ファイルシステム直接アクセス
 
+### Phase 6: データ構造再編成 (1週間) ✅ 100%完了
+
+- [x] **Trade Data Structure Restructuring（GitHub Issue #21 - COMPLETE）**
+- [x] 日付ベースフォルダ階層の実装
+- [x] 連番システムによる同日複数取引対応
+- [x] デフォルト保存場所変更（Documents → ホーム直下）
+- [x] パス生成ユーティリティの実装
+- [x] コンポーネント統合とTypeScript型安全性向上
+- [x] **統合CSV管理システムの完全実装**（Phase 2完了）
+- [x] **中央trades.csvファイル**: 全取引データの一元管理
+- [x] **TradeDataService**: CSVサービスとアプリケーション間のブリッジ
+- [x] **useTradeDataフック**: Reactコンポーネント統合
+- [x] **自動マイグレーション**: LocalStorageから中央CSVへの移行
+- [x] **エラーハンドリング**: LocalStorageフォールバック機能
+- [x] **データ移行ツール**（Phase 4完了）
+- [x] **DataMigrationService**: 旧フォルダ構造からの移行ユーティリティ
+- [x] **データ検証・修復機能**: 整合性チェックとクリーンアップツール
+- [x] **バックアップシステム**: 移行前の自動バックアップ作成
+- [x] **設定ページ**: ユーザーフレンドリーな管理インターフェース
+
 ## 8. 非機能要件
 
 ### 8.1 パフォーマンス
@@ -422,6 +452,8 @@ T002,2024-01-20,AAPL,sell,100,190.00,10.00,430.00,"trades/2024/01/T002_AAPL_売�
 ### 未実装機能
 
 - ⏳ 自動バックアップ機能（Issue #3 で進行中）
+- ⏳ 統合CSV管理システム完全実装（Issue #21 Phase 2）
+- ⏳ データ移行ツール（Issue #21 Phase 4）
 - ⏳ 設定画面
 - ⏳ パフォーマンス最適化
 
@@ -441,6 +473,18 @@ T002,2024-01-20,AAPL,sell,100,190.00,10.00,430.00,"trades/2024/01/T002_AAPL_売�
   - VSCode-like自動リロード（外部変更検知）
   - ファイルシステム直接アクセス（LocalStorage不使用）
   - 既存ファイル上書き対応
+
+- 🔄 **Trade Data Structure Restructuring**（Issue #21 - 70%完了）
+  - 日付ベースフォルダ階層への移行
+  - デフォルト保存場所変更: `~/Documents/TradeJournal/` → `~/TradeJournal/`
+  - フォルダ命名規則: `trades/{year}/{ticker}_{MM-DD}_{sequence}/`
+  - 連番システム: 同一銘柄・同日の複数取引に自動採番（001, 002, 003...）
+  - パス生成ライブラリ: `lib/trade-folder/path-generator.ts`
+  - 統合CSV管理の基盤: `lib/csv/central-csv-service.ts`
+  - コンポーネント適応: TradeNotesDropdown, MarkdownSideEditor
+  - TypeScript型安全性: 厳密な型定義とインターフェース
+  - 動的パス解決: config.dataDirectoryによるユーザー環境対応
+  - リアルタイムフォルダスキャン: memoファイル自動検出
 
 ## 10. 将来的な拡張案
 
