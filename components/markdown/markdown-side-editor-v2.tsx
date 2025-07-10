@@ -21,10 +21,12 @@ import {
 import { cn } from '@/lib/utils';
 import { Trade } from '@/types/trade';
 import { AppConfig } from '@/types/app';
+import { createTradeFolderWithSequence } from '@/lib/trade-folder/path-generator';
 
 export interface MarkdownSideEditorProps {
   trade: Trade;
   memoFile?: string | null;
+  folderPath?: string | null; // Full path to the trade folder
   onClose: () => void;
   onSave?: () => void;
 }
@@ -32,6 +34,7 @@ export interface MarkdownSideEditorProps {
 export function MarkdownSideEditorV2({
   trade,
   memoFile,
+  folderPath,
   onClose,
   onSave
 }: MarkdownSideEditorProps) {
@@ -104,16 +107,13 @@ ${trade.pnl ? `- **P&L**: $${trade.pnl.toFixed(2)}` : ''}
   }, [memoFile, trade, config, isPreview]);
 
   const getTradeFolderPath = () => {
-    if (!config) return null;
+    // If folderPath is provided (new structure), use it
+    if (folderPath) {
+      return folderPath;
+    }
     
-    const pattern = config.markdownFileNamePattern || '{tradeId}_{ticker}_{date}';
-    const folderName = pattern
-      .replace('{tradeId}', trade.id)
-      .replace('{ticker}', trade.ticker)
-      .replace('{date}', trade.buyDate)
-      .replace('{type}', 'folder');
-    
-    return `${config.dataDirectory}/${config.markdownDirectory || 'trades'}/${folderName}`;
+    // Always use new structure - no fallback to old pattern
+    return null; // This will trigger automatic folder creation with sequence
   };
 
   const loadMemoContent = async () => {
@@ -159,26 +159,47 @@ ${trade.pnl ? `- **P&L**: $${trade.pnl.toFixed(2)}` : ''}
     setError(null);
     
     try {
-      const folderPath = getTradeFolderPath();
-      if (!folderPath) throw new Error('Could not determine folder path');
+      let actualFolderPath = getTradeFolderPath();
+      
+      // If no folderPath provided, create new folder with sequence
+      if (!folderPath && !actualFolderPath) {
+        if (window.electronAPI?.fs) {
+          const newFolderInfo = await createTradeFolderWithSequence(
+            window.electronAPI.fs,
+            trade.ticker,
+            trade.buyDate,
+            config.dataDirectory
+          );
+          
+          if (!newFolderInfo) {
+            throw new Error('Failed to create new trade folder');
+          }
+          
+          actualFolderPath = newFolderInfo.fullPath;
+        } else {
+          throw new Error('Electron API not available');
+        }
+      } else if (!actualFolderPath) {
+        throw new Error('Could not determine folder path');
+      }
       
       // Ensure folder exists
       if (window.electronAPI?.fs) {
-        const existsResult = await window.electronAPI.fs.exists(folderPath);
+        const existsResult = await window.electronAPI.fs.exists(actualFolderPath);
         if (!existsResult.success || !existsResult.data) {
-          const createResult = await window.electronAPI.fs.createDir(folderPath);
+          const createResult = await window.electronAPI.fs.createDir(actualFolderPath);
           if (!createResult.success) {
             throw new Error(createResult.error || 'Failed to create folder');
           }
           
           // Create images subfolder
-          const imagesPath = `${folderPath}/images`;
+          const imagesPath = `${actualFolderPath}/images`;
           await window.electronAPI.fs.createDir(imagesPath);
         }
         
         // Determine file path - always use memoFile if it exists, otherwise create new
         const finalFileName = memoFile || `${fileName}.md`;
-        const filePath = `${folderPath}/${finalFileName}`;
+        const filePath = `${actualFolderPath}/${finalFileName}`;
         
         console.log('Saving to:', filePath);
         console.log('Content length:', content.length);

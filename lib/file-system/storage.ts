@@ -163,7 +163,7 @@ export class LocalStorage {
     
     // Return default config if none exists
     const defaultConfig: AppConfig = {
-      dataDirectory: '~/Documents/TradeJournal',
+      dataDirectory: '~/TradeJournal',
       tradeDirectory: 'trades',
       portfolioDirectory: 'portfolios',
       templatesDirectory: 'templates',

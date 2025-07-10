@@ -30,7 +30,9 @@ export default function TradesPage() {
   const [viewMode, setViewMode] = useState<'table' | 'csv'>('table');
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [selectedMemoFile, setSelectedMemoFile] = useState<string | null>(null);
+  const [selectedFolderPath, setSelectedFolderPath] = useState<string | null>(null);
   const [showMarkdownEditor, setShowMarkdownEditor] = useState(false);
+  const [memoRefreshTrigger, setMemoRefreshTrigger] = useState(0);
 
   useEffect(() => {
     const loadedTrades = LocalStorage.loadTrades();
@@ -332,12 +334,14 @@ export default function TradesPage() {
   const handleQuickMemo = (trade: Trade) => {
     setSelectedTrade(trade);
     setSelectedMemoFile(null);
+    setSelectedFolderPath(null); // Will trigger auto-creation of new folder
     setShowMarkdownEditor(true);
   };
 
-  const handleOpenMemo = (trade: Trade, memoFile: string) => {
+  const handleOpenMemo = (trade: Trade, memoFile: string, folderPath: string) => {
     setSelectedTrade(trade);
     setSelectedMemoFile(memoFile);
+    setSelectedFolderPath(folderPath);
     setShowMarkdownEditor(true);
   };
 
@@ -434,6 +438,7 @@ export default function TradesPage() {
               onUpdateTrade={handleUpdateTrade}
               onQuickMemo={handleQuickMemo}
               onOpenMemo={handleOpenMemo}
+              memoRefreshTrigger={memoRefreshTrigger}
             />
           </div>
         ) : (
@@ -456,16 +461,21 @@ export default function TradesPage() {
         <MarkdownSideEditor
           trade={selectedTrade}
           memoFile={selectedMemoFile}
+          folderPath={selectedFolderPath}
           onClose={() => {
             setShowMarkdownEditor(false);
             setSelectedTrade(null);
             setSelectedMemoFile(null);
+            setSelectedFolderPath(null);
           }}
           onSave={async () => {
             // Reload trades to update notes files
             const loadedTrades = LocalStorage.loadTrades();
             setTrades(loadedTrades);
             setFilteredTrades(loadedTrades);
+            
+            // Trigger memo dropdown refresh
+            setMemoRefreshTrigger(prev => prev + 1);
             
             // Force re-render by resetting selection
             setShowMarkdownEditor(false);

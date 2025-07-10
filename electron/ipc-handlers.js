@@ -381,9 +381,9 @@ function initializeIPC(mainWindow) {
 
   ipcMain.handle('config:get-default-config', async () => {
     try {
-      const documentsPath = app.getPath('documents');
+      const homePath = app.getPath('home');
       const defaultConfig = {
-        dataDirectory: path.join(documentsPath, 'TradeJournal'),
+        dataDirectory: path.join(homePath, 'TradeJournal'),
         tradeDirectory: 'trades',
         portfolioDirectory: 'portfolios',
         templatesDirectory: 'templates',
