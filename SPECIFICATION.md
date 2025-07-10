@@ -365,6 +365,10 @@ T002,2024-01-20,AAPL,sell,100,190.00,10.00,430.00,"trades/2024/01/T002_AAPL_売�
 - [x] CSV文書管理システム
 - [x] エクスポート機能（CSV/JSON）
 - [x] ストレージ管理機能
+- [x] Enhanced Trade Import（GitHub Issue #16）
+- [x] Trade型データ構造変更（取引ベース）
+- [x] 自動P&L計算機能
+- [x] CSVエディタ統合機能
 
 ## 8. 非機能要件
 
@@ -414,12 +418,14 @@ T002,2024-01-20,AAPL,sell,100,190.00,10.00,430.00,"trades/2024/01/T002_AAPL_売�
 - ⏳ 設定画面
 - ⏳ パフォーマンス最適化
 
-### 計画中機能
+### 実装完了機能（Phase 4追加）
 
-- 📋 **Enhanced Trade Import**（Issue #16）
+- ✅ **Enhanced Trade Import**（Issue #16）
   - フォーマット準拠 + カスタムカラム統合
-  - 基本Trade型（analytics対応）+ ユーザーカスタムフィールド
-  - CSV ViewerとTrade分析機能の統合
+  - Trade型のデータ構造変更（取引ベース）
+  - 自動P&L計算機能
+  - CSVエディタ統合（セルレベル編集）
+  - リアルタイム更新・永続化
 
 ## 10. 将来的な拡張案
 

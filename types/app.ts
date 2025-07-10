@@ -12,6 +12,11 @@ export interface AppConfig {
   csvImport?: any; // Optional for CSV import configuration
   ui?: any; // Optional for UI configuration
   export?: any; // Optional for export configuration
+  // Markdown memo configuration
+  markdownEnabled?: boolean;
+  markdownDirectory?: string; // Relative to dataDirectory (default: 'trades')
+  autoCreateMarkdownFolders?: boolean;
+  markdownFileNamePattern?: string; // Pattern for markdown file naming
 }
 
 export interface AppState {

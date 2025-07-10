@@ -1,6 +1,8 @@
 'use client';
 
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeHighlight from 'rehype-highlight';
 import { cn } from '@/lib/utils';
 
 interface MarkdownPreviewProps {
@@ -12,6 +14,8 @@ export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
   return (
     <div className={cn('prose prose-sm max-w-none', className)}>
       <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeHighlight]}
         components={{
           h1: ({ children }) => (
             <h1 className="text-2xl font-bold mb-4 text-gray-900">{children}</h1>

@@ -149,10 +149,10 @@ Based on completed GitHub issues:
 
 ### Phase 4 Completed:
 - **CSV Viewer/Editor** (#15): Flexible CSV data management without mapping requirements
+- **Enhanced Trade Import** (#16): フォーマット準拠 + カスタムカラム統合 (completed)
 
 ### Currently Open:
 - **Export and Backup Functionality** (#3): In progress
-- **Enhanced Trade Import** (#16): フォーマット準拠 + カスタムカラム統合 (planned)
 
 ## API Services
 
@@ -203,10 +203,19 @@ A flexible CSV data management system that allows users to view and edit CSV fil
 - Non-investment data management
 - Quick CSV editing without setup
 
-### Enhanced Trade Import (Planned - Issue #16)
+### Enhanced Trade Import (Completed - Issue #16)
 Integration of CSV Viewer flexibility with Trade analytics capabilities.
 
-**Concept**: "Follow format for analytics, but add custom fields for flexibility"
-- Basic Trade fields (date, ticker, action, quantity, price) for analytics
-- Custom fields for user-specific data
-- Best of both worlds: structure + flexibility
+**Implementation**: "Follow format for analytics, but add custom fields for flexibility"
+- **Trade Model Restructured**: Changed from transaction-based to trade-based format
+- **Auto-calculations**: P&L and holding period calculated automatically from buy/sell data
+- **CSV Editor Integration**: Full CSV Viewer-like editing experience with click-to-edit cells
+- **Column Separation**: Separated combined date/price columns for easier editing
+- **Real-time Updates**: Changes persist automatically to LocalStorage with proper state management
+
+**Key Features:**
+- Trade-based data structure with buyDate/sellDate, buyPrice/sellPrice
+- Automatic P&L calculations based on buy/sell transactions
+- Excel-like editing interface with cell-level modifications
+- Seamless integration between CSV editing and Trade analytics
+- LocalStorage persistence with proper state management
