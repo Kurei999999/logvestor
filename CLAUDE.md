@@ -20,6 +20,12 @@ npm start
 
 # Run linter
 npm run lint
+
+# Run Electron in development mode
+npm run electron-dev
+
+# Build Electron app for distribution
+npm run electron-build
 ```
 
 ## Technology Stack
@@ -28,7 +34,7 @@ npm run lint
 - **Language**: TypeScript 5 with strict mode
 - **Styling**: Tailwind CSS 4.x
 - **Runtime**: React 19
-- **Future**: Electron 33+ for desktop packaging
+- **Desktop Framework**: Electron 33+ (implemented)
 
 ## Architecture Overview
 
@@ -76,9 +82,9 @@ lib/
 └── utils/             # Utilities (search, debounce)
 
 electron/              # Electron main process
-├── main.ts
-├── preload.ts
-└── ipc-handlers/
+├── main.js            # Main process entry point
+├── preload.js         # Preload script with contextBridge
+└── ipc-handlers.js    # IPC event handlers
 ```
 
 ## Key Design Principles
@@ -101,14 +107,60 @@ electron/              # Electron main process
 - Flexible date format handling
 - Action mapping for different buy/sell terminology
 
-## Future Electron Integration
+## Electron Integration (Implemented)
 
-The project is designed to be packaged as an Electron desktop application with:
-- IPC communication between renderer and main process
-- Native file system access
-- Cross-platform compatibility (Windows, macOS, Linux)
-- Local-only operation for privacy
+The project has been successfully integrated with Electron and includes:
+- **IPC Communication**: Secure communication between renderer and main process using contextBridge
+- **Native File System Access**: Full file system operations through Electron APIs
+- **Security**: Context isolation enabled with proper preload script
+- **Development Mode**: Hot reload support with `npm run electron-dev`
+- **Production Build**: Packaging with electron-builder for distribution
+- **Cross-platform**: Ready for Windows, macOS, and Linux deployment
 
 ## Path Aliases
 
 - `@/*` maps to the project root directory
+
+## Implemented Features
+
+Based on completed GitHub issues:
+
+### Phase 1 Completed:
+- **Analytics Dashboard** (#1): Interactive charts, PnL summaries, performance metrics
+- **Enhanced Trade Filtering** (#2): Advanced search, filter presets, bulk operations
+- **UI/UX Improvements** (#4): Responsive design, loading states, error handling
+- **Bug Fix** (#8): Fixed infinite re-render issue on gallery page
+
+### Phase 2 Completed:
+- **File System API Abstraction** (#5): Service layer for file operations
+- **IPC Communication Layer** (#6): Secure Electron IPC implementation
+
+### Phase 3 Completed:
+- **Electron Integration** (#7): Full desktop application functionality
+
+### Currently Open:
+- **Export and Backup Functionality** (#3): In progress
+
+## API Services
+
+### ElectronFileService
+The main service for file operations when running in Electron:
+- `readDirectory()`: List files in a directory
+- `readFile()`: Read file contents
+- `writeFile()`: Write data to file
+- `deleteFile()`: Delete a file
+- `exists()`: Check if file/directory exists
+- `createDirectory()`: Create new directory
+- `selectFile()`: Open file dialog
+- `selectDirectory()`: Open directory dialog
+
+### IPC Channels
+Available IPC channels for Electron communication:
+- `file:read-directory`
+- `file:read-file`
+- `file:write-file`
+- `file:delete-file`
+- `file:exists`
+- `file:create-directory`
+- `dialog:select-file`
+- `dialog:select-directory`
