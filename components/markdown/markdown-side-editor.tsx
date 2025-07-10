@@ -95,8 +95,8 @@ ${trade.pnl ? `- **P&L**: $${trade.pnl.toFixed(2)}` : ''}
       const folderResult = await localFileSyncService.getTradeFolder(trade);
       console.log('Folder result:', folderResult);
       
-      if (folderResult.success && folderResult.data && folderResult.data.folderPath) {
-        const filePath = `${folderResult.data.folderPath}/${memoFile}`;
+      if (folderResult.success && folderResult.data && folderResult.data.path) {
+        const filePath = `${folderResult.data.path}/${memoFile}`;
         console.log('Reading file from:', filePath);
         
         if (window.electronAPI?.fs) {

@@ -13,7 +13,8 @@ import {
   FileText,
   Menu,
   X,
-  Table
+  Table,
+  Settings
 } from 'lucide-react';
 
 const navigation = [
@@ -23,6 +24,7 @@ const navigation = [
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'CSV Viewer', href: '/csv-viewer', icon: Table },
   { name: 'Import', href: '/import', icon: Upload },
+  { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
 export function Navigation() {

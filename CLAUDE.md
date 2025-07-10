@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is "Trade Journal Local" - a local file-based investment record management system similar to Obsidian. The application is designed to be completely offline, privacy-focused, and will eventually be packaged as an Electron desktop application.
+This is "Trade Journal Local" - a local file-based investment record management system similar to Obsidian. The application is designed to be completely offline, privacy-focused, and packaged as an Electron desktop application.
 
 ## Development Commands
 
@@ -41,9 +41,11 @@ npm run electron-build
 The application follows a local-first architecture with these key concepts:
 
 ### Data Management
-- **Local File System**: All data stored in user's local directories (e.g., `~/Documents/TradeJournal/`)
+- **Local File System**: All data stored in user's local directories (default: `~/TradeJournal/`)
+- **Date-based Folder Structure**: `trades/{year}/{ticker}_{MM-DD}_{sequence}/` with automatic sequence numbering
 - **Markdown Files**: Trade records stored as markdown files with frontmatter
 - **CSV Integration**: Portfolio data managed via CSV files with custom mapping support
+- **Central CSV Management**: Single `trades.csv` file for unified analytics data
 - **Image Storage**: Chart images stored alongside markdown files in organized folders
 
 ### Core Features
@@ -57,7 +59,7 @@ The application follows a local-first architecture with these key concepts:
 8. **Bulk Operations**: Bulk select, delete, and export trades
 9. **CSV Viewer/Editor**: Flexible CSV data management without mapping requirements
 
-### Directory Structure (Current)
+### Directory Structure
 ```
 app/
 ├── (main)/
@@ -65,8 +67,9 @@ app/
 │   ├── trades/        # Trade listing and details
 │   ├── gallery/       # Image gallery views
 │   ├── analytics/     # Analysis and reporting
-│   ├── csv-viewer/    # CSV viewer/editor (implemented)
-│   └── import/        # CSV import functionality
+│   ├── csv-viewer/    # CSV viewer/editor
+│   ├── import/        # CSV import functionality
+│   └── settings/      # Settings and migration tools
 └── api/               # Electron IPC communication
 
 components/
@@ -74,12 +77,17 @@ components/
 ├── trade/             # Trade-specific components
 ├── gallery/           # Gallery components
 ├── analytics/         # Analytics components
-├── csv-viewer/        # CSV viewer components (implemented)
-└── markdown/          # Markdown editor components (implemented)
+├── csv-viewer/        # CSV viewer components
+├── markdown/          # Markdown editor components
+└── migration/         # Migration tools components
 
 lib/
 ├── file-system/       # File operations
-│   └── csv-storage.ts # CSV document storage (implemented)
+├── trade-folder/      # Trade folder management
+├── csv/               # CSV management
+├── services/          # Application services
+├── hooks/             # React hooks
+├── migration/         # Data migration tools
 ├── parsers/           # CSV/Excel/MD parsing
 ├── csv-mapper/        # CSV mapping logic
 ├── trade-linker/      # CSV-MD linking
@@ -88,8 +96,8 @@ lib/
 
 types/
 ├── trade.ts           # Trade-related types
-├── csv.ts             # Legacy CSV import types
-└── csv-viewer.ts      # CSV viewer types (implemented)
+├── csv.ts             # CSV types
+└── csv-viewer.ts      # CSV viewer types
 
 electron/              # Electron main process
 ├── main.js            # Main process entry point
@@ -117,7 +125,7 @@ electron/              # Electron main process
 - Flexible date format handling
 - Action mapping for different buy/sell terminology
 
-## Electron Integration (Implemented)
+## Electron Integration
 
 The project has been successfully integrated with Electron and includes:
 - **IPC Communication**: Secure communication between renderer and main process using contextBridge
@@ -131,41 +139,40 @@ The project has been successfully integrated with Electron and includes:
 
 - `@/*` maps to the project root directory
 
-## Implemented Features
+## Implementation Status
 
-Based on completed GitHub issues:
+### Completed Features (by Phase):
 
-### Phase 1 Completed:
-- **Analytics Dashboard** (#1): Interactive charts, PnL summaries, performance metrics
-- **Enhanced Trade Filtering** (#2): Advanced search, filter presets, bulk operations
-- **UI/UX Improvements** (#4): Responsive design, loading states, error handling
-- **Bug Fix** (#8): Fixed infinite re-render issue on gallery page
+**Phase 1-3: Core Infrastructure ✅**
+- Analytics Dashboard (#1): Interactive charts, PnL summaries, performance metrics
+- Enhanced Trade Filtering (#2): Advanced search, filter presets, bulk operations
+- UI/UX Improvements (#4): Responsive design, loading states, error handling
+- File System API Abstraction (#5): Service layer for file operations
+- IPC Communication Layer (#6): Secure Electron IPC implementation
+- Electron Integration (#7): Full desktop application functionality
+- Bug Fix (#8): Fixed infinite re-render issue on gallery page
 
-### Phase 2 Completed:
-- **File System API Abstraction** (#5): Service layer for file operations
-- **IPC Communication Layer** (#6): Secure Electron IPC implementation
+**Phase 4: CSV Management ✅**
+- CSV Viewer/Editor (#15): Flexible CSV data management without mapping requirements
+- Enhanced Trade Import (#16): Format compliance with custom column integration
+- Markdown Memo Integration (#19): Local file-based trade notes system with VSCode-like editing
 
-### Phase 3 Completed:
-- **Electron Integration** (#7): Full desktop application functionality
+**Phase 5: Data Structure Restructuring ✅**
+- Trade Data Structure Restructuring (#21): Complete date-based folder hierarchy with central CSV management
 
-### Phase 4 Completed:
-- **CSV Viewer/Editor** (#15): Flexible CSV data management without mapping requirements
-- **Enhanced Trade Import** (#16): フォーマット準拠 + カスタムカラム統合 (completed)
-- **Markdown Memo Integration** (#19): Local file-based trade notes system with VSCode-like editing
-
-### Currently Open:
-- **Export and Backup Functionality** (#3): In progress
+### Currently In Progress:
+- Export and Backup Functionality (#3): In progress
 
 ## API Services
 
 ### ElectronFileService
-The main service for file operations when running in Electron:
-- `readDirectory()`: List files in a directory
+Main service for file operations when running in Electron:
+- `readDir()`: List files in a directory
 - `readFile()`: Read file contents
 - `writeFile()`: Write data to file
 - `deleteFile()`: Delete a file
 - `exists()`: Check if file/directory exists
-- `createDirectory()`: Create new directory
+- `createDir()`: Create new directory
 - `selectFile()`: Open file dialog
 - `selectDirectory()`: Open directory dialog
 
@@ -180,62 +187,37 @@ Available IPC channels for Electron communication:
 - `dialog:select-file`
 - `dialog:select-directory`
 
-## CSV Management System
+## Key Implemented Systems
 
-### CSV Viewer/Editor (Implemented - Issue #15)
-A flexible CSV data management system that allows users to view and edit CSV files without complex mapping requirements.
+### CSV Management System
+- **CSV Viewer/Editor**: Flexible CSV data management without complex mapping requirements
+- **Enhanced Trade Import**: Integration of CSV Viewer flexibility with Trade analytics capabilities
+- **Central CSV Service**: Unified `trades.csv` file management system
 
-**Key Features:**
-- **No Mapping Required**: Display CSV files exactly as they are
-- **Excel-like Editing**: Click-to-edit cells, add/delete rows and columns
-- **Flexible Structure**: Support for any CSV column structure
-- **Document Management**: Multiple CSV documents with metadata
-- **Export Capabilities**: Export as CSV or JSON
-- **Storage Management**: LocalStorage with usage monitoring
-
-**Components:**
-- `CSVTable`: Excel-like table with editing capabilities
-- `CSVUploader`: Drag & drop file upload
-- `CSVViewer`: Main viewer component
-- `CSVStorage`: LocalStorage-based document management
-
-**Use Cases:**
-- Data exploration (checking CSV structure)
-- General spreadsheet operations
-- Non-investment data management
-- Quick CSV editing without setup
-
-### Enhanced Trade Import (Completed - Issue #16)
-Integration of CSV Viewer flexibility with Trade analytics capabilities.
-
-**Implementation**: "Follow format for analytics, but add custom fields for flexibility"
-- **Trade Model Restructured**: Changed from transaction-based to trade-based format
-- **Auto-calculations**: P&L and holding period calculated automatically from buy/sell data
-- **CSV Editor Integration**: Full CSV Viewer-like editing experience with click-to-edit cells
-- **Column Separation**: Separated combined date/price columns for easier editing
-- **Real-time Updates**: Changes persist automatically to LocalStorage with proper state management
-
-**Key Features:**
-- Trade-based data structure with buyDate/sellDate, buyPrice/sellPrice
-- Automatic P&L calculations based on buy/sell transactions
-- Excel-like editing interface with cell-level modifications
-- Seamless integration between CSV editing and Trade analytics
-- LocalStorage persistence with proper state management
-
-### Markdown Memo Integration (Completed - Issue #19)
-Local file-based trade notes system with VSCode-like editing experience.
-
-**Implementation**: Direct file system integration with real-time markdown editing
+### Markdown Integration
 - **TradeNotesDropdown**: Real-time file listing from trade folders
 - **MarkdownSideEditor**: Right-side panel with edit/preview modes
 - **VSCode-like Auto-reload**: External file changes reflected automatically
 - **File System Direct Access**: No LocalStorage dependency for memo data
-- **Existing File Preservation**: Proper file overwrite handling
+
+### Trade Data Structure (Issue #21 - ✅ COMPLETE)
+- **Date-based Folder Hierarchy**: `trades/{year}/{ticker}_{MM-DD}_{sequence}/`
+- **Directory Location**: Changed from `~/Documents/TradeJournal` to `~/TradeJournal`
+- **Sequence Number System**: Automatic assignment for multiple trades (001, 002, 003)
+- **Path Generator Library**: New utilities for folder creation and management
+- **Central CSV Management**: Single source of truth for all trade data
+- **Automatic Migration**: LocalStorage to central CSV migration system
+- **Migration Tools**: Complete data migration, validation, and cleanup utilities
+- **Settings Page**: User-friendly interface for data management
+- **Component Updates**: TradeNotesDropdown and MarkdownSideEditor adapted for new structure
 
 **Key Features:**
-- Dropdown menu in trade table for memo file access
-- Right-side panel markdown editor with live preview
-- Auto-reload functionality (2-second intervals in preview mode)
-- Direct file system read/write operations
-- Support for multiple markdown files per trade
-- Real-time file listing updates
+- Year-based folder organization with clean naming
+- Dynamic path resolution using config.dataDirectory
+- Auto-creation of folder structure with sequence assignment
+- Backward compatibility with existing folder patterns
+- TypeScript type safety with proper interface definitions
+- Real-time folder scanning and memo file detection
+- Error handling with LocalStorage fallback
+- Automatic sync and data validation
+- Backup system with automatic backup creation before migrations

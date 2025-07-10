@@ -37,10 +37,11 @@ interface TradesListProps {
   onExportTrades?: (tradeIds: string[]) => void;
   onUpdateTrade?: (tradeId: string, field: string, value: any) => void;
   onQuickMemo?: (trade: Trade) => void;
-  onOpenMemo?: (trade: Trade, memoFile: string) => void;
+  onOpenMemo?: (trade: Trade, memoFile: string, folderPath: string) => void;
+  memoRefreshTrigger?: number; // External trigger to refresh memo dropdowns
 }
 
-export function TradesList({ trades, onDeleteTrade, onBulkDelete, onExportTrades, onUpdateTrade, onQuickMemo, onOpenMemo }: TradesListProps) {
+export function TradesList({ trades, onDeleteTrade, onBulkDelete, onExportTrades, onUpdateTrade, onQuickMemo, onOpenMemo, memoRefreshTrigger }: TradesListProps) {
   const [selectedTrades, setSelectedTrades] = useState<string[]>([]);
   const [editingCell, setEditingCell] = useState<{ tradeId: string; field: string } | null>(null);
   const [editValue, setEditValue] = useState<string>('');
@@ -314,6 +315,7 @@ export function TradesList({ trades, onDeleteTrade, onBulkDelete, onExportTrades
                     trade={trade}
                     onOpenMemo={onOpenMemo}
                     onNewMemo={onQuickMemo}
+                    refreshTrigger={memoRefreshTrigger}
                   />
                 </TableCell>
                 <TableCell>
