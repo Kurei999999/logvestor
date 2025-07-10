@@ -2,6 +2,10 @@ const { ipcMain, dialog, shell, app } = require('electron');
 const fs = require('fs').promises;
 const path = require('path');
 const { existsSync, statSync } = require('fs');
+const chokidar = require('chokidar');
+
+// File watcher instances
+const watchers = new Map();
 
 // Initialize IPC handlers
 function initializeIPC(mainWindow) {
@@ -387,7 +391,12 @@ function initializeIPC(mainWindow) {
         theme: 'light',
         autoBackup: true,
         backupInterval: 24 * 60 * 60 * 1000,
-        maxBackups: 10
+        maxBackups: 10,
+        // Markdown memo configuration
+        markdownEnabled: true,
+        markdownDirectory: 'trades',
+        autoCreateMarkdownFolders: true,
+        markdownFileNamePattern: '{tradeId}_{ticker}_{date}'
       };
       return { success: true, data: defaultConfig };
     } catch (error) {
@@ -395,12 +404,78 @@ function initializeIPC(mainWindow) {
     }
   });
 
-  // CSV Operations (placeholder - would need CSV parsing library)
+  // File Watcher Operations
+  ipcMain.handle('fs:watch-directory', async (event, directoryPath, watchId) => {
+    try {
+      // Close existing watcher if any
+      if (watchers.has(watchId)) {
+        watchers.get(watchId).close();
+      }
+
+      const watcher = chokidar.watch(directoryPath, {
+        persistent: true,
+        ignoreInitial: false,
+        followSymlinks: false,
+        depth: 2, // Watch subdirectories up to 2 levels deep
+        ignored: /(^|[\/\\])\../, // Ignore dotfiles
+      });
+
+      watcher
+        .on('add', (filePath) => {
+          mainWindow.webContents.send('file-watcher:file-added', { watchId, filePath, type: 'file' });
+        })
+        .on('change', (filePath) => {
+          mainWindow.webContents.send('file-watcher:file-changed', { watchId, filePath, type: 'file' });
+        })
+        .on('unlink', (filePath) => {
+          mainWindow.webContents.send('file-watcher:file-removed', { watchId, filePath, type: 'file' });
+        })
+        .on('addDir', (dirPath) => {
+          mainWindow.webContents.send('file-watcher:file-added', { watchId, filePath: dirPath, type: 'directory' });
+        })
+        .on('unlinkDir', (dirPath) => {
+          mainWindow.webContents.send('file-watcher:file-removed', { watchId, filePath: dirPath, type: 'directory' });
+        })
+        .on('error', (error) => {
+          mainWindow.webContents.send('file-watcher:error', { watchId, error: error.message });
+        });
+
+      watchers.set(watchId, watcher);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('fs:unwatch-directory', async (event, watchId) => {
+    try {
+      if (watchers.has(watchId)) {
+        watchers.get(watchId).close();
+        watchers.delete(watchId);
+      }
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  // CSV Operations
   ipcMain.handle('csv:parse-csv', async (event, filePath) => {
     try {
-      // This would use a CSV parsing library like csv-parser
-      // For now, returning placeholder
-      return { success: true, data: [] };
+      const csvParser = require('csv-parser');
+      const results = [];
+      
+      return new Promise((resolve) => {
+        require('fs').createReadStream(filePath)
+          .pipe(csvParser())
+          .on('data', (data) => results.push(data))
+          .on('end', () => {
+            resolve({ success: true, data: results });
+          })
+          .on('error', (error) => {
+            resolve({ success: false, error: error.message });
+          });
+      });
     } catch (error) {
       return { success: false, error: error.message };
     }
@@ -408,8 +483,116 @@ function initializeIPC(mainWindow) {
 
   ipcMain.handle('csv:export-csv', async (event, data, filePath) => {
     try {
-      // This would convert data to CSV format
-      // For now, returning placeholder
+      const createCsvWriter = require('csv-writer').createObjectCsvWriter;
+      
+      if (!data || data.length === 0) {
+        return { success: false, error: 'No data to export' };
+      }
+
+      // Get headers from first object
+      const headers = Object.keys(data[0]).map(key => ({
+        id: key,
+        title: key
+      }));
+
+      const csvWriter = createCsvWriter({
+        path: filePath,
+        header: headers
+      });
+
+      await csvWriter.writeRecords(data);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Trades CSV Operations
+  ipcMain.handle('csv:read-trades-csv', async (event, filePath) => {
+    try {
+      if (!existsSync(filePath)) {
+        return { success: true, data: [] };
+      }
+
+      const csvParser = require('csv-parser');
+      const results = [];
+      
+      return new Promise((resolve) => {
+        require('fs').createReadStream(filePath)
+          .pipe(csvParser())
+          .on('data', (data) => {
+            // Convert CSV row to Trade format
+            const trade = {
+              id: data.id || `T${Date.now()}`,
+              ticker: data.ticker || '',
+              buyDate: data.buyDate || data.buy_date || '',
+              buyPrice: data.buyPrice ? parseFloat(data.buyPrice) : (data.buy_price ? parseFloat(data.buy_price) : 0),
+              quantity: data.quantity ? parseInt(data.quantity) : 0,
+              sellDate: data.sellDate || data.sell_date || '',
+              sellPrice: data.sellPrice ? parseFloat(data.sellPrice) : (data.sell_price ? parseFloat(data.sell_price) : 0),
+              commission: data.commission ? parseFloat(data.commission) : 0,
+              tags: data.tags ? data.tags.split(',').map(t => t.trim()) : [],
+              notesFiles: data.notesFiles ? data.notesFiles.split(',').map(f => f.trim()) : [],
+              createdAt: data.createdAt || new Date().toISOString(),
+              updatedAt: data.updatedAt || new Date().toISOString()
+            };
+
+            // Calculate P&L and holding days if sellDate exists
+            if (trade.sellDate && trade.sellPrice) {
+              trade.pnl = (trade.sellPrice - trade.buyPrice) * trade.quantity - (trade.commission || 0);
+              const buyDate = new Date(trade.buyDate);
+              const sellDate = new Date(trade.sellDate);
+              trade.holdingDays = Math.floor((sellDate.getTime() - buyDate.getTime()) / (1000 * 60 * 60 * 24));
+            }
+
+            results.push(trade);
+          })
+          .on('end', () => {
+            resolve({ success: true, data: results });
+          })
+          .on('error', (error) => {
+            resolve({ success: false, error: error.message });
+          });
+      });
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('csv:write-trades-csv', async (event, trades, filePath) => {
+    try {
+      const createCsvWriter = require('csv-writer').createObjectCsvWriter;
+      
+      const headers = [
+        { id: 'id', title: 'id' },
+        { id: 'ticker', title: 'ticker' },
+        { id: 'buyDate', title: 'buyDate' },
+        { id: 'buyPrice', title: 'buyPrice' },
+        { id: 'quantity', title: 'quantity' },
+        { id: 'sellDate', title: 'sellDate' },
+        { id: 'sellPrice', title: 'sellPrice' },
+        { id: 'pnl', title: 'pnl' },
+        { id: 'holdingDays', title: 'holdingDays' },
+        { id: 'commission', title: 'commission' },
+        { id: 'tags', title: 'tags' },
+        { id: 'notesFiles', title: 'notesFiles' },
+        { id: 'createdAt', title: 'createdAt' },
+        { id: 'updatedAt', title: 'updatedAt' }
+      ];
+
+      const csvWriter = createCsvWriter({
+        path: filePath,
+        header: headers
+      });
+
+      // Convert trades to CSV format
+      const csvData = trades.map(trade => ({
+        ...trade,
+        tags: Array.isArray(trade.tags) ? trade.tags.join(',') : '',
+        notesFiles: Array.isArray(trade.notesFiles) ? trade.notesFiles.join(',') : ''
+      }));
+
+      await csvWriter.writeRecords(csvData);
       return { success: true };
     } catch (error) {
       return { success: false, error: error.message };

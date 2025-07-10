@@ -6,6 +6,8 @@ export class CSVStorage {
   private static readonly MAX_STORAGE_SIZE = 10 * 1024 * 1024; // 10MB limit
 
   static loadDocuments(): CSVDocument[] {
+    if (typeof window === 'undefined') return [];
+    
     try {
       const data = localStorage.getItem(this.STORAGE_KEY);
       if (!data) return [];
@@ -192,6 +194,10 @@ export class CSVStorage {
   }
 
   static getStorageInfo(): { used: number; available: number; percentage: number } {
+    if (typeof window === 'undefined') {
+      return { used: 0, available: this.MAX_STORAGE_SIZE, percentage: 0 };
+    }
+    
     const data = localStorage.getItem(this.STORAGE_KEY) || '';
     const used = new Blob([data]).size;
     const available = this.MAX_STORAGE_SIZE - used;

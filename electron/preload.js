@@ -16,6 +16,24 @@ const electronAPI = {
     moveFile: (src, dest) => ipcRenderer.invoke('fs:move-file', src, dest)
   },
 
+  // File Watcher Operations
+  fileWatcher: {
+    watchDirectory: (directoryPath, watchId) => ipcRenderer.invoke('fs:watch-directory', directoryPath, watchId),
+    unwatchDirectory: (watchId) => ipcRenderer.invoke('fs:unwatch-directory', watchId),
+    // Event listeners for file changes
+    onFileAdded: (callback) => ipcRenderer.on('file-watcher:file-added', callback),
+    onFileChanged: (callback) => ipcRenderer.on('file-watcher:file-changed', callback),
+    onFileRemoved: (callback) => ipcRenderer.on('file-watcher:file-removed', callback),
+    onError: (callback) => ipcRenderer.on('file-watcher:error', callback),
+    // Remove listeners
+    removeAllListeners: () => {
+      ipcRenderer.removeAllListeners('file-watcher:file-added');
+      ipcRenderer.removeAllListeners('file-watcher:file-changed');
+      ipcRenderer.removeAllListeners('file-watcher:file-removed');
+      ipcRenderer.removeAllListeners('file-watcher:error');
+    }
+  },
+
   // Dialog Operations
   dialog: {
     showOpenDialog: (options) => ipcRenderer.invoke('dialog:show-open-dialog', options),
@@ -57,7 +75,9 @@ const electronAPI = {
     parseCSV: (filePath) => ipcRenderer.invoke('csv:parse-csv', filePath),
     exportCSV: (data, filePath) => ipcRenderer.invoke('csv:export-csv', data, filePath),
     loadCSVMappings: (directory) => ipcRenderer.invoke('csv:load-mappings', directory),
-    saveCSVMapping: (mapping, directory) => ipcRenderer.invoke('csv:save-mapping', mapping, directory)
+    saveCSVMapping: (mapping, directory) => ipcRenderer.invoke('csv:save-mapping', mapping, directory),
+    readTradesCSV: (filePath) => ipcRenderer.invoke('csv:read-trades-csv', filePath),
+    writeTradesCSV: (trades, filePath) => ipcRenderer.invoke('csv:write-trades-csv', trades, filePath)
   },
 
   // Configuration

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -14,7 +14,8 @@ import { TradeFilters as ITradeFilters } from '@/types/app';
 import { LocalStorage } from '@/lib/file-system/storage';
 import { searchTrades } from '@/lib/utils/search';
 import { debounce } from '@/lib/utils/debounce';
-import { Plus, Search, Filter, Edit3 } from 'lucide-react';
+import { Plus, Search, Filter, Edit3, FileText, TrendingUp, TrendingDown, Calendar, DollarSign, PenTool, MoreHorizontal } from 'lucide-react';
+import { MarkdownSideEditorV2 as MarkdownSideEditor } from '@/components/markdown/markdown-side-editor-v2';
 import Link from 'next/link';
 
 export default function TradesPage() {
@@ -26,7 +27,10 @@ export default function TradesPage() {
   const [sortBy, setSortBy] = useState<'date' | 'ticker' | 'pnl' | 'quantity' | 'price' | 'commission'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showFilters, setShowFilters] = useState(false);
-  const [viewMode, setViewMode] = useState<'table' | 'csv'>('csv');
+  const [viewMode, setViewMode] = useState<'table' | 'csv'>('table');
+  const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
+  const [selectedMemoFile, setSelectedMemoFile] = useState<string | null>(null);
+  const [showMarkdownEditor, setShowMarkdownEditor] = useState(false);
 
   useEffect(() => {
     const loadedTrades = LocalStorage.loadTrades();
@@ -325,162 +329,151 @@ export default function TradesPage() {
   const winningTrades = filteredTrades.filter(trade => (trade.pnl || 0) > 0).length;
   const winRate = totalTrades > 0 ? (winningTrades / totalTrades * 100).toFixed(1) : '0';
 
+  const handleQuickMemo = (trade: Trade) => {
+    setSelectedTrade(trade);
+    setSelectedMemoFile(null);
+    setShowMarkdownEditor(true);
+  };
+
+  const handleOpenMemo = (trade: Trade, memoFile: string) => {
+    setSelectedTrade(trade);
+    setSelectedMemoFile(memoFile);
+    setShowMarkdownEditor(true);
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Trades</h1>
-          <p className="text-gray-600 mt-2">
-            Manage and analyze your trading records
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-            <Button
-              variant={viewMode === 'table' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('table')}
-            >
-              Table View
-            </Button>
-            <Button
-              variant={viewMode === 'csv' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setViewMode('csv')}
-            >
-              CSV Editor
-            </Button>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">Trade Journal</h1>
+            <p className="text-gray-600 text-sm mt-1">
+              {totalTrades} trades • {winRate}% win rate • ${totalPnL.toFixed(2)} total P&L
+            </p>
           </div>
-          <Button>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Trade
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Trades</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalTrades}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total P&L</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              ${totalPnL.toFixed(2)}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Win Rate</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{winRate}%</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Winning Trades</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{winningTrades}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Trade Records</CardTitle>
-          <CardDescription>
-            View and manage your trading history
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center space-x-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search trades by ticker or tags..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              
-              <Select value={sortBy} onValueChange={(value: 'date' | 'ticker' | 'pnl' | 'quantity' | 'price' | 'commission') => setSortBy(value)}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="date">Date</SelectItem>
-                  <SelectItem value="ticker">Ticker</SelectItem>
-                  <SelectItem value="pnl">P&L</SelectItem>
-                  <SelectItem value="quantity">Quantity</SelectItem>
-                  <SelectItem value="price">Price</SelectItem>
-                  <SelectItem value="commission">Commission</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={sortOrder} onValueChange={(value: 'asc' | 'desc') => setSortOrder(value)}>
-                <SelectTrigger className="w-32">
-                  <SelectValue placeholder="Order" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="desc">Descending</SelectItem>
-                  <SelectItem value="asc">Ascending</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Button 
-                variant="outline" 
-                onClick={() => setShowFilters(!showFilters)}
+          <div className="flex gap-3">
+            <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+              <Button
+                variant={viewMode === 'table' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('table')}
               >
-                <Filter className="w-4 h-4 mr-2" />
-                Filters
+                Table
+              </Button>
+              <Button
+                variant={viewMode === 'csv' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('csv')}
+              >
+                CSV
               </Button>
             </div>
-
-            {showFilters && (
-              <TradeFilters 
-                filters={filters} 
-                onFiltersChange={handleFilterChange}
-                availableTickers={[...new Set(trades.map(t => t.ticker))]}
-              />
-            )}
-
-            {viewMode === 'table' ? (
-              <TradesList 
-                trades={filteredTrades} 
-                onDeleteTrade={handleDeleteTrade}
-                onBulkDelete={handleBulkDelete}
-                onExportTrades={handleExportTrades}
-                onUpdateTrade={handleUpdateTrade}
-              />
-            ) : (
-              <CSVTable
-                document={tradesToCSVDocument(filteredTrades || [])}
-                onUpdateCell={handleCSVUpdateCell}
-                onAddRow={handleCSVAddRow}
-                onDeleteRow={handleCSVDeleteRow}
-                onAddColumn={handleCSVAddColumn}
-                onDeleteColumn={handleCSVDeleteColumn}
-                editable={true}
-              />
-            )}
+            <Button>
+              <Plus className="w-4 h-4 mr-2" />
+              New Trade
+            </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+
+      {/* Search and Filters */}
+      <div className="px-6 py-4 bg-white border-b border-gray-200">
+        <div className="flex items-center gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Search trades..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 border-0 bg-gray-50 focus:bg-white"
+            />
+          </div>
+          
+          <Select value={sortBy} onValueChange={(value: 'date' | 'ticker' | 'pnl' | 'quantity' | 'price' | 'commission') => setSortBy(value)}>
+            <SelectTrigger className="w-32 border-0 bg-gray-50">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="date">Date</SelectItem>
+              <SelectItem value="ticker">Ticker</SelectItem>
+              <SelectItem value="pnl">P&L</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+            className="border-0 bg-gray-50"
+          >
+            <Filter className="w-4 h-4" />
+          </Button>
+        </div>
+
+        {showFilters && (
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <TradeFilters 
+              filters={filters} 
+              onFiltersChange={handleFilterChange}
+              availableTickers={[...new Set(trades.map(t => t.ticker))]}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Main Content */}
+      <div className="px-6 py-6">
+        {viewMode === 'table' ? (
+          <div className="bg-white rounded-lg border border-gray-200">
+            <TradesList 
+              trades={filteredTrades} 
+              onDeleteTrade={handleDeleteTrade}
+              onBulkDelete={handleBulkDelete}
+              onExportTrades={handleExportTrades}
+              onUpdateTrade={handleUpdateTrade}
+              onQuickMemo={handleQuickMemo}
+              onOpenMemo={handleOpenMemo}
+            />
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg border border-gray-200">
+            <CSVTable
+              document={tradesToCSVDocument(filteredTrades || [])}
+              onUpdateCell={handleCSVUpdateCell}
+              onAddRow={handleCSVAddRow}
+              onDeleteRow={handleCSVDeleteRow}
+              onAddColumn={handleCSVAddColumn}
+              onDeleteColumn={handleCSVDeleteColumn}
+              editable={true}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Markdown Editor Side Panel */}
+      {showMarkdownEditor && selectedTrade && (
+        <MarkdownSideEditor
+          trade={selectedTrade}
+          memoFile={selectedMemoFile}
+          onClose={() => {
+            setShowMarkdownEditor(false);
+            setSelectedTrade(null);
+            setSelectedMemoFile(null);
+          }}
+          onSave={async () => {
+            // Reload trades to update notes files
+            const loadedTrades = LocalStorage.loadTrades();
+            setTrades(loadedTrades);
+            setFilteredTrades(loadedTrades);
+            
+            // Force re-render by resetting selection
+            setShowMarkdownEditor(false);
+            setSelectedTrade(null);
+            setSelectedMemoFile(null);
+          }}
+        />
+      )}
     </div>
   );
 }

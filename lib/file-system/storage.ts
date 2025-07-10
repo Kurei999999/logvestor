@@ -172,6 +172,11 @@ export class LocalStorage {
       autoBackup: true,
       backupInterval: 24 * 60 * 60 * 1000, // 24 hours in milliseconds
       maxBackups: 10,
+      // Markdown memo default configuration
+      markdownEnabled: true,
+      markdownDirectory: 'trades',
+      autoCreateMarkdownFolders: true,
+      markdownFileNamePattern: '{tradeId}_{ticker}_{date}_{type}',
     };
     
     this.saveAppConfig(defaultConfig);

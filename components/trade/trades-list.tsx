@@ -13,7 +13,9 @@ import {
   FileText,
   Images,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  PenTool,
+  ChevronDown
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -25,6 +27,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Trade } from '@/types/trade';
 import { formatDate, formatCurrency } from '@/lib/utils';
+import { MarkdownEditorModal } from '@/components/markdown/markdown-editor-modal';
+import { TradeNotesDropdown } from './trade-notes-dropdown';
 
 interface TradesListProps {
   trades: Trade[];
@@ -32,12 +36,15 @@ interface TradesListProps {
   onBulkDelete?: (tradeIds: string[]) => void;
   onExportTrades?: (tradeIds: string[]) => void;
   onUpdateTrade?: (tradeId: string, field: string, value: any) => void;
+  onQuickMemo?: (trade: Trade) => void;
+  onOpenMemo?: (trade: Trade, memoFile: string) => void;
 }
 
-export function TradesList({ trades, onDeleteTrade, onBulkDelete, onExportTrades, onUpdateTrade }: TradesListProps) {
+export function TradesList({ trades, onDeleteTrade, onBulkDelete, onExportTrades, onUpdateTrade, onQuickMemo, onOpenMemo }: TradesListProps) {
   const [selectedTrades, setSelectedTrades] = useState<string[]>([]);
   const [editingCell, setEditingCell] = useState<{ tradeId: string; field: string } | null>(null);
   const [editValue, setEditValue] = useState<string>('');
+  const [selectedTradeForMemo, setSelectedTradeForMemo] = useState<Trade | null>(null);
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -303,16 +310,11 @@ export function TradesList({ trades, onDeleteTrade, onBulkDelete, onExportTrades
                   )}
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center space-x-1">
-                    {(trade.notesFiles || []).length > 0 && (
-                      <div className="flex items-center space-x-1">
-                        <FileText className="w-4 h-4 text-blue-500" />
-                        <span className="text-sm text-gray-600">
-                          {trade.notesFiles!.length}
-                        </span>
-                      </div>
-                    )}
-                  </div>
+                  <TradeNotesDropdown
+                    trade={trade}
+                    onOpenMemo={onOpenMemo}
+                    onNewMemo={onQuickMemo}
+                  />
                 </TableCell>
                 <TableCell>
                   {renderEditableCell(
@@ -345,9 +347,9 @@ export function TradesList({ trades, onDeleteTrade, onBulkDelete, onExportTrades
                         <Edit className="mr-2 h-4 w-4" />
                         Edit Trade
                       </DropdownMenuItem>
-                      <DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setSelectedTradeForMemo(trade)}>
                         <FileText className="mr-2 h-4 w-4" />
-                        Add Note
+                        Create Memo
                       </DropdownMenuItem>
                       <DropdownMenuItem>
                         <Images className="mr-2 h-4 w-4" />
@@ -405,6 +407,17 @@ export function TradesList({ trades, onDeleteTrade, onBulkDelete, onExportTrades
             </Button>
           </div>
         </div>
+      )}
+
+      {/* Markdown Editor Modal */}
+      {selectedTradeForMemo && (
+        <MarkdownEditorModal
+          trade={selectedTradeForMemo}
+          isOpen={!!selectedTradeForMemo}
+          onClose={() => setSelectedTradeForMemo(null)}
+          templateType="custom"
+          onSaved={() => setSelectedTradeForMemo(null)}
+        />
       )}
     </div>
   );

@@ -18,15 +18,16 @@ export function searchTrades(trades: Trade[], searchTerm: string): Trade[] {
       return true;
     }
     
-    // Search in action
-    if (trade.action.toLowerCase().includes(normalizedSearch)) {
+    // Search in ticker
+    if (trade.ticker?.toLowerCase().includes(normalizedSearch)) {
       return true;
     }
     
     // Search in numeric fields (convert to string for comparison)
     const numericFields = [
-      trade.quantity.toString(),
-      trade.price.toString(),
+      trade.quantity?.toString() || '',
+      trade.buyPrice?.toString() || '',
+      trade.sellPrice?.toString() || '',
       trade.commission?.toString() || '',
       trade.pnl?.toString() || '',
     ];
@@ -35,16 +36,18 @@ export function searchTrades(trades: Trade[], searchTerm: string): Trade[] {
       return true;
     }
     
-    // Search in date (various formats)
-    const dateStr = new Date(trade.date).toLocaleDateString();
-    const isoDateStr = trade.date;
-    if (dateStr.toLowerCase().includes(normalizedSearch) || 
-        isoDateStr.includes(normalizedSearch)) {
+    // Search in dates (various formats)
+    const buyDateStr = trade.buyDate ? new Date(trade.buyDate).toLocaleDateString() : '';
+    const sellDateStr = trade.sellDate ? new Date(trade.sellDate).toLocaleDateString() : '';
+    if (buyDateStr.toLowerCase().includes(normalizedSearch) || 
+        sellDateStr.toLowerCase().includes(normalizedSearch) ||
+        trade.buyDate?.includes(normalizedSearch) ||
+        trade.sellDate?.includes(normalizedSearch)) {
       return true;
     }
     
     // Search in calculated fields
-    const totalValue = (trade.quantity * trade.price).toString();
+    const totalValue = trade.quantity && trade.buyPrice ? (trade.quantity * trade.buyPrice).toString() : '';
     if (totalValue.includes(normalizedSearch)) {
       return true;
     }

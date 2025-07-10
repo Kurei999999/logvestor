@@ -5,8 +5,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ChevronUp, ChevronDown, Plus, Trash2 } from 'lucide-react';
+import { ChevronUp, ChevronDown, Plus, Trash2, FileText } from 'lucide-react';
 import { Trade } from '@/types/trade';
+import { MarkdownEditorModal } from '@/components/markdown/markdown-editor-modal';
 
 interface TradesTableProps {
   trades: Trade[];
@@ -27,6 +28,7 @@ export function TradesTable({
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [editingCell, setEditingCell] = useState<{ tradeId: string; field: string } | null>(null);
   const [editValue, setEditValue] = useState<string>('');
+  const [selectedTradeForMemo, setSelectedTradeForMemo] = useState<Trade | null>(null);
 
   const columns = [
     { key: 'ticker', label: 'Ticker', type: 'text' },
@@ -51,9 +53,9 @@ export function TradesTable({
       if (aValue === bValue) return 0;
 
       if (sortOrder === 'asc') {
-        return aValue < bValue ? -1 : 1;
+        return (aValue ?? 0) < (bValue ?? 0) ? -1 : 1;
       } else {
-        return aValue > bValue ? -1 : 1;
+        return (aValue ?? 0) > (bValue ?? 0) ? -1 : 1;
       }
     });
   }, [trades, sortBy, sortOrder]);
@@ -169,7 +171,6 @@ export function TradesTable({
         <Table>
           <TableHeader>
             <TableRow>
-              {editable && <TableHead className="w-12"></TableHead>}
               <TableHead className="w-20">Status</TableHead>
               {columns.map((column) => (
                 <TableHead 
@@ -183,23 +184,12 @@ export function TradesTable({
                   </div>
                 </TableHead>
               ))}
+              {editable && <TableHead className="w-16">Memo</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {sortedTrades.map((trade) => (
               <TableRow key={trade.id}>
-                {editable && (
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0"
-                      onClick={() => onDeleteRow(trade.id)}
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
-                  </TableCell>
-                )}
                 <TableCell>
                   <Badge variant={trade.sellDate ? 'default' : 'secondary'}>
                     {trade.sellDate ? 'CLOSED' : 'OPEN'}
@@ -234,6 +224,19 @@ export function TradesTable({
                     )}
                   </TableCell>
                 ))}
+                {editable && (
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={() => setSelectedTradeForMemo(trade)}
+                      title="Create memo"
+                    >
+                      <FileText className="w-3 h-3" />
+                    </Button>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>
@@ -244,6 +247,17 @@ export function TradesTable({
         <div className="text-center py-8 text-gray-500">
           No trades available. Click &quot;Add Trade&quot; to create your first trade.
         </div>
+      )}
+
+      {/* Markdown Editor Modal */}
+      {selectedTradeForMemo && (
+        <MarkdownEditorModal
+          trade={selectedTradeForMemo}
+          isOpen={!!selectedTradeForMemo}
+          onClose={() => setSelectedTradeForMemo(null)}
+          templateType="custom"
+          onSaved={() => setSelectedTradeForMemo(null)}
+        />
       )}
     </div>
   );

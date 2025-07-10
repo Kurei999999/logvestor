@@ -227,7 +227,7 @@ export class TradeLinker {
   }
 
   static generateFileName(trade: Trade, type: 'entry' | 'exit' | 'analysis' | 'followup' | 'custom', customName?: string): string {
-    const date = new Date(trade.date);
+    const date = new Date(trade.buyDate);
     const dateStr = date.toISOString().split('T')[0].replace(/-/g, '');
     
     switch (type) {

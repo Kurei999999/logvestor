@@ -30,13 +30,13 @@ export class ServiceFactory implements IServiceFactory {
   createDataService(): IDataService {
     // Return cached instance if available
     if (ServiceFactory.dataServiceInstance) {
-      return ServiceFactory.dataServiceInstance;
+      return ServiceFactory.dataServiceInstance!;
     }
 
     // Determine environment and create appropriate service
     if (this.isElectronEnvironment()) {
       console.log('[ServiceFactory] Creating Electron file service');
-      ServiceFactory.dataServiceInstance = new ElectronFileService();
+      ServiceFactory.dataServiceInstance = new ElectronFileService() as any;
     } else if (this.isBrowserEnvironment()) {
       console.log('[ServiceFactory] Creating Browser data service');
       ServiceFactory.dataServiceInstance = new BrowserDataService();
@@ -45,7 +45,7 @@ export class ServiceFactory implements IServiceFactory {
       ServiceFactory.dataServiceInstance = new BrowserDataService();
     }
 
-    return ServiceFactory.dataServiceInstance;
+    return ServiceFactory.dataServiceInstance!;
   }
 
   /**
@@ -174,7 +174,7 @@ export class ServiceFactory implements IServiceFactory {
    * Get current data service instance (if any)
    */
   static getCurrentDataService(): IDataService | null {
-    return ServiceFactory.dataServiceInstance;
+    return ServiceFactory.dataServiceInstance!;
   }
 
   // === Feature Detection Methods ===

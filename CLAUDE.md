@@ -74,7 +74,8 @@ components/
 ├── trade/             # Trade-specific components
 ├── gallery/           # Gallery components
 ├── analytics/         # Analytics components
-└── csv-viewer/        # CSV viewer components (implemented)
+├── csv-viewer/        # CSV viewer components (implemented)
+└── markdown/          # Markdown editor components (implemented)
 
 lib/
 ├── file-system/       # File operations
@@ -149,10 +150,11 @@ Based on completed GitHub issues:
 
 ### Phase 4 Completed:
 - **CSV Viewer/Editor** (#15): Flexible CSV data management without mapping requirements
+- **Enhanced Trade Import** (#16): フォーマット準拠 + カスタムカラム統合 (completed)
+- **Markdown Memo Integration** (#19): Local file-based trade notes system with VSCode-like editing
 
 ### Currently Open:
 - **Export and Backup Functionality** (#3): In progress
-- **Enhanced Trade Import** (#16): フォーマット準拠 + カスタムカラム統合 (planned)
 
 ## API Services
 
@@ -203,10 +205,37 @@ A flexible CSV data management system that allows users to view and edit CSV fil
 - Non-investment data management
 - Quick CSV editing without setup
 
-### Enhanced Trade Import (Planned - Issue #16)
+### Enhanced Trade Import (Completed - Issue #16)
 Integration of CSV Viewer flexibility with Trade analytics capabilities.
 
-**Concept**: "Follow format for analytics, but add custom fields for flexibility"
-- Basic Trade fields (date, ticker, action, quantity, price) for analytics
-- Custom fields for user-specific data
-- Best of both worlds: structure + flexibility
+**Implementation**: "Follow format for analytics, but add custom fields for flexibility"
+- **Trade Model Restructured**: Changed from transaction-based to trade-based format
+- **Auto-calculations**: P&L and holding period calculated automatically from buy/sell data
+- **CSV Editor Integration**: Full CSV Viewer-like editing experience with click-to-edit cells
+- **Column Separation**: Separated combined date/price columns for easier editing
+- **Real-time Updates**: Changes persist automatically to LocalStorage with proper state management
+
+**Key Features:**
+- Trade-based data structure with buyDate/sellDate, buyPrice/sellPrice
+- Automatic P&L calculations based on buy/sell transactions
+- Excel-like editing interface with cell-level modifications
+- Seamless integration between CSV editing and Trade analytics
+- LocalStorage persistence with proper state management
+
+### Markdown Memo Integration (Completed - Issue #19)
+Local file-based trade notes system with VSCode-like editing experience.
+
+**Implementation**: Direct file system integration with real-time markdown editing
+- **TradeNotesDropdown**: Real-time file listing from trade folders
+- **MarkdownSideEditor**: Right-side panel with edit/preview modes
+- **VSCode-like Auto-reload**: External file changes reflected automatically
+- **File System Direct Access**: No LocalStorage dependency for memo data
+- **Existing File Preservation**: Proper file overwrite handling
+
+**Key Features:**
+- Dropdown menu in trade table for memo file access
+- Right-side panel markdown editor with live preview
+- Auto-reload functionality (2-second intervals in preview mode)
+- Direct file system read/write operations
+- Support for multiple markdown files per trade
+- Real-time file listing updates
