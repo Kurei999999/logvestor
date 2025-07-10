@@ -46,64 +46,95 @@ export class CSVMapper {
   }
 
   private static mapRowToTrade(row: Record<string, string | number>, mapping: CSVMapping): Trade | null {
-    const { columnMapping, dateFormat, actionMapping, numberFormat } = mapping;
+    const { columnMapping, dateFormat, numberFormat } = mapping;
 
     // Extract required fields
-    const dateValue = row[columnMapping.date];
+    const buyDateValue = row[columnMapping.buyDate];
     const tickerValue = row[columnMapping.ticker];
-    const actionValue = row[columnMapping.action];
+    const buyPriceValue = row[columnMapping.buyPrice];
     const quantityValue = row[columnMapping.quantity];
-    const priceValue = row[columnMapping.price];
 
-    if (!dateValue || !tickerValue || !actionValue || !quantityValue || !priceValue) {
+    if (!buyDateValue || !tickerValue || !buyPriceValue || !quantityValue) {
       return null;
     }
 
-    // Parse date
-    let parsedDate: Date;
+    // Parse buy date
+    let parsedBuyDate: Date;
     try {
-      parsedDate = parse(dateValue.toString(), dateFormat, new Date());
-      if (isNaN(parsedDate.getTime())) {
-        throw new Error(`Invalid date format: ${dateValue}`);
+      parsedBuyDate = parse(buyDateValue.toString(), dateFormat, new Date());
+      if (isNaN(parsedBuyDate.getTime())) {
+        throw new Error(`Invalid buy date format: ${buyDateValue}`);
       }
     } catch (error) {
-      throw new Error(`Date parsing error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(`Buy date parsing error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 
-    // Map action
-    const action = this.mapAction(actionValue.toString(), actionMapping);
-    if (!action) {
-      throw new Error(`Unknown action: ${actionValue}`);
-    }
-
-    // Parse numbers
+    // Parse required numbers
     const quantity = parseNumber(quantityValue, numberFormat);
-    const price = parseNumber(priceValue, numberFormat);
+    const buyPrice = parseNumber(buyPriceValue, numberFormat);
 
-    if (quantity <= 0 || price <= 0) {
-      throw new Error(`Invalid quantity or price: ${quantity}, ${price}`);
+    if (quantity <= 0 || buyPrice <= 0) {
+      throw new Error(`Invalid quantity or buy price: ${quantity}, ${buyPrice}`);
     }
 
-    // Parse optional fields
+    // Parse optional sell fields
+    let sellDate: string | undefined;
+    let sellPrice: number | undefined;
+    
+    if (columnMapping.sellDate && row[columnMapping.sellDate]) {
+      try {
+        const parsedSellDate = parse(row[columnMapping.sellDate].toString(), dateFormat, new Date());
+        if (!isNaN(parsedSellDate.getTime())) {
+          sellDate = format(parsedSellDate, 'yyyy-MM-dd');
+        }
+      } catch (error) {
+        // If sell date parsing fails, just leave it undefined
+      }
+    }
+
+    if (columnMapping.sellPrice && row[columnMapping.sellPrice]) {
+      try {
+        const parsedSellPrice = parseNumber(row[columnMapping.sellPrice], numberFormat);
+        if (parsedSellPrice > 0) {
+          sellPrice = parsedSellPrice;
+        }
+      } catch (error) {
+        // If sell price parsing fails, just leave it undefined
+      }
+    }
+
+    // Auto-calculate P&L if both sell price and buy price are available
+    let pnl: number | undefined;
+    if (sellPrice !== undefined) {
+      pnl = (sellPrice - buyPrice) * quantity;
+    }
+
+    // Auto-calculate holding days if both dates are available
+    let holdingDays: number | undefined;
+    if (sellDate) {
+      const buyDateObj = parsedBuyDate;
+      const sellDateObj = parse(sellDate, 'yyyy-MM-dd', new Date());
+      holdingDays = Math.ceil((sellDateObj.getTime() - buyDateObj.getTime()) / (1000 * 60 * 60 * 24));
+    }
+
+    // Parse optional commission
     const commission = columnMapping.commission
       ? parseNumber(row[columnMapping.commission] || 0, numberFormat)
-      : undefined;
-
-    const pnl = columnMapping.pnl
-      ? parseNumber(row[columnMapping.pnl] || 0, numberFormat)
       : undefined;
 
     const now = new Date().toISOString();
 
     return {
       id: generateId(),
-      date: format(parsedDate, 'yyyy-MM-dd'),
       ticker: tickerValue.toString().toUpperCase(),
-      action,
+      buyDate: format(parsedBuyDate, 'yyyy-MM-dd'),
+      buyPrice,
       quantity,
-      price,
-      commission,
+      sellDate,
+      sellPrice,
       pnl,
+      holdingDays,
+      commission,
       tags: [],
       notesFiles: [],
       createdAt: now,
@@ -111,19 +142,6 @@ export class CSVMapper {
     };
   }
 
-  private static mapAction(actionValue: string, actionMapping: CSVMapping['actionMapping']): 'buy' | 'sell' | null {
-    const normalizedAction = actionValue.toLowerCase().trim();
-    
-    if (actionMapping.buy.some(buyAction => buyAction.toLowerCase() === normalizedAction)) {
-      return 'buy';
-    }
-    
-    if (actionMapping.sell.some(sellAction => sellAction.toLowerCase() === normalizedAction)) {
-      return 'sell';
-    }
-    
-    return null;
-  }
 
   static createDefaultMapping(): CSVMapping {
     const now = new Date().toISOString();
@@ -131,21 +149,17 @@ export class CSVMapper {
     return {
       id: generateId(),
       name: 'Default Mapping',
-      description: 'Default CSV mapping configuration',
+      description: 'Default CSV mapping for complete trade records',
       columnMapping: {
-        date: 'date',
+        buyDate: 'buyDate',
         ticker: 'ticker',
-        action: 'action',
+        buyPrice: 'buyPrice',
         quantity: 'quantity',
-        price: 'price',
-        commission: 'commission',
-        pnl: 'pnl'
+        sellDate: 'sellDate',
+        sellPrice: 'sellPrice',
+        commission: 'commission'
       },
       dateFormat: 'yyyy-MM-dd',
-      actionMapping: {
-        buy: ['buy', 'B', 'Buy', 'BUY', '買い', '現物買', '信用新規買'],
-        sell: ['sell', 'S', 'Sell', 'SELL', '売り', '現物売', '信用返済売']
-      },
       numberFormat: {
         decimalSeparator: '.',
         thousandsSeparator: ','
@@ -160,7 +174,7 @@ export class CSVMapper {
     const { columnMapping } = mapping;
 
     // Check required columns
-    const requiredColumns = ['date', 'ticker', 'action', 'quantity', 'price'];
+    const requiredColumns = ['buyDate', 'ticker', 'buyPrice', 'quantity'];
     
     for (const required of requiredColumns) {
       const mappedColumn = columnMapping[required];
@@ -171,21 +185,21 @@ export class CSVMapper {
       }
     }
 
+    // Check optional columns if they are mapped
+    const optionalColumns = ['sellDate', 'sellPrice', 'commission'];
+    for (const optional of optionalColumns) {
+      const mappedColumn = columnMapping[optional];
+      if (mappedColumn && !headers.includes(mappedColumn)) {
+        errors.push(`Mapped column '${mappedColumn}' not found in CSV headers`);
+      }
+    }
+
     // Validate date format
     try {
       const testDate = '2024-01-01';
       parse(testDate, mapping.dateFormat, new Date());
     } catch (error) {
       errors.push(`Invalid date format: ${mapping.dateFormat}`);
-    }
-
-    // Validate action mapping
-    if (!mapping.actionMapping.buy.length) {
-      errors.push('No buy actions defined in action mapping');
-    }
-    
-    if (!mapping.actionMapping.sell.length) {
-      errors.push('No sell actions defined in action mapping');
     }
 
     return errors;

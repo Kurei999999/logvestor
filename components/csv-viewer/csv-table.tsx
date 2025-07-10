@@ -34,6 +34,7 @@ export function CSVTable({
   const [showAddColumn, setShowAddColumn] = useState(false);
 
   const sortedRecords = useMemo(() => {
+    if (!document?.records || !Array.isArray(document.records)) return [];
     if (!sortBy) return document.records;
 
     return [...document.records].sort((a, b) => {
@@ -134,7 +135,7 @@ export function CSVTable({
           <TableHeader>
             <TableRow>
               {editable && <TableHead className="w-12"></TableHead>}
-              {document.headers.map((header) => (
+              {(document?.headers || []).map((header) => (
                 <TableHead 
                   key={header} 
                   className="cursor-pointer hover:bg-gray-50 min-w-32"
@@ -164,7 +165,7 @@ export function CSVTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedRecords.map((record) => (
+            {(sortedRecords || []).map((record) => (
               <TableRow key={record.id}>
                 {editable && (
                   <TableCell>
@@ -178,7 +179,7 @@ export function CSVTable({
                     </Button>
                   </TableCell>
                 )}
-                {document.headers.map((header) => (
+                {(document?.headers || []).map((header) => (
                   <TableCell 
                     key={header} 
                     className={editable ? "cursor-pointer hover:bg-gray-50" : ""}

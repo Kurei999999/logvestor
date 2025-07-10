@@ -6,13 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TradesList } from '@/components/trade/trades-list';
+import { CSVTable } from '@/components/csv-viewer/csv-table';
+import { tradesToCSVDocument, csvDocumentToTrades } from '@/lib/utils/trades-csv-converter';
 import { TradeFilters } from '@/components/trade/trade-filters';
 import { Trade } from '@/types/trade';
 import { TradeFilters as ITradeFilters } from '@/types/app';
 import { LocalStorage } from '@/lib/file-system/storage';
 import { searchTrades } from '@/lib/utils/search';
 import { debounce } from '@/lib/utils/debounce';
-import { Plus, Search, Filter } from 'lucide-react';
+import { Plus, Search, Filter, Edit3 } from 'lucide-react';
+import Link from 'next/link';
 
 export default function TradesPage() {
   const [trades, setTrades] = useState<Trade[]>([]);
@@ -23,6 +26,7 @@ export default function TradesPage() {
   const [sortBy, setSortBy] = useState<'date' | 'ticker' | 'pnl' | 'quantity' | 'price' | 'commission'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showFilters, setShowFilters] = useState(false);
+  const [viewMode, setViewMode] = useState<'table' | 'csv'>('csv');
 
   useEffect(() => {
     const loadedTrades = LocalStorage.loadTrades();
@@ -53,7 +57,7 @@ export default function TradesPage() {
     // Apply filters
     if (filters.dateRange) {
       filtered = filtered.filter(trade => {
-        const tradeDate = new Date(trade.date);
+        const tradeDate = new Date(trade.buyDate);
         const startDate = new Date(filters.dateRange!.start);
         const endDate = new Date(filters.dateRange!.end);
         return tradeDate >= startDate && tradeDate <= endDate;
@@ -67,9 +71,22 @@ export default function TradesPage() {
     }
 
     if (filters.actions && filters.actions.length > 0) {
-      filtered = filtered.filter(trade => 
-        filters.actions!.includes(trade.action)
-      );
+      filtered = filtered.filter(trade => {
+        // Map old action filter to new status logic
+        // 'buy' filter -> show open trades (no sell date)
+        // 'sell' filter -> show closed trades (has sell date)
+        const hasOpenFilter = filters.actions!.includes('buy');
+        const hasClosedFilter = filters.actions!.includes('sell');
+        
+        if (hasOpenFilter && hasClosedFilter) {
+          return true; // Show all trades
+        } else if (hasOpenFilter) {
+          return !trade.sellDate; // Show only open trades
+        } else if (hasClosedFilter) {
+          return !!trade.sellDate; // Show only closed trades
+        }
+        return false;
+      });
     }
 
     if (filters.hasNotes !== undefined) {
@@ -119,8 +136,8 @@ export default function TradesPage() {
       
       switch (sortBy) {
         case 'date':
-          aValue = new Date(a.date);
-          bValue = new Date(b.date);
+          aValue = new Date(a.buyDate);
+          bValue = new Date(b.buyDate);
           break;
         case 'ticker':
           aValue = a.ticker;
@@ -135,8 +152,8 @@ export default function TradesPage() {
           bValue = b.quantity;
           break;
         case 'price':
-          aValue = a.price;
-          bValue = b.price;
+          aValue = a.buyPrice;
+          bValue = b.buyPrice;
           break;
         case 'commission':
           aValue = a.commission || 0;
@@ -176,17 +193,114 @@ export default function TradesPage() {
     downloadCSV(csv, `trades-export-${new Date().toISOString().split('T')[0]}.csv`);
   };
 
+  const handleUpdateTrade = (tradeId: string, field: string, value: any) => {
+    const updatedTrades = trades.map(trade => {
+      if (trade.id === tradeId) {
+        const updatedTrade = { ...trade, [field]: value, updatedAt: new Date().toISOString() };
+        
+        // Auto-calculate P&L and holding days
+        if (field === 'sellPrice' || field === 'buyPrice' || field === 'quantity') {
+          if (updatedTrade.sellPrice && updatedTrade.buyPrice && updatedTrade.quantity) {
+            updatedTrade.pnl = (updatedTrade.sellPrice - updatedTrade.buyPrice) * updatedTrade.quantity;
+          }
+        }
+        
+        if (field === 'sellDate' || field === 'buyDate') {
+          if (updatedTrade.sellDate && updatedTrade.buyDate) {
+            const buyDate = new Date(updatedTrade.buyDate);
+            const sellDate = new Date(updatedTrade.sellDate);
+            updatedTrade.holdingDays = Math.ceil((sellDate.getTime() - buyDate.getTime()) / (1000 * 60 * 60 * 24));
+          }
+        }
+        
+        return updatedTrade;
+      }
+      return trade;
+    });
+    
+    setTrades(updatedTrades);
+    LocalStorage.saveTrades(updatedTrades);
+  };
+
+  // CSV Table handlers
+  const handleCSVUpdateCell = (recordId: string, columnName: string, value: any) => {
+    const csvDocument = tradesToCSVDocument(filteredTrades || []);
+    const updatedRecords = csvDocument.records.map(record => {
+      if (record.id === recordId) {
+        return {
+          ...record,
+          rowData: {
+            ...record.rowData,
+            [columnName]: value
+          }
+        };
+      }
+      return record;
+    });
+
+    const updatedDocument = {
+      ...csvDocument,
+      records: updatedRecords
+    };
+
+    const updatedTrades = csvDocumentToTrades(updatedDocument);
+    
+    // Update the main trades array
+    const newTrades = trades.map(trade => {
+      const updatedTrade = updatedTrades.find(t => t.id === trade.id);
+      return updatedTrade || trade;
+    });
+
+    setTrades(newTrades);
+    LocalStorage.saveTrades(newTrades);
+  };
+
+  const handleCSVAddRow = () => {
+    const newTrade: Trade = {
+      id: `trade-${Date.now()}`,
+      buyDate: new Date().toISOString().split('T')[0],
+      ticker: '',
+      quantity: 0,
+      buyPrice: 0,
+      tags: [],
+      notesFiles: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    const newTrades = [...trades, newTrade];
+    setTrades(newTrades);
+    LocalStorage.saveTrades(newTrades);
+  };
+
+  const handleCSVDeleteRow = (recordId: string) => {
+    handleDeleteTrade(recordId);
+  };
+
+  const handleCSVAddColumn = (columnName: string) => {
+    // For now, we'll keep the fixed column structure
+    console.log('Add column not yet implemented:', columnName);
+  };
+
+  const handleCSVDeleteColumn = (columnName: string) => {
+    // For now, we'll keep the fixed column structure
+    console.log('Delete column not yet implemented:', columnName);
+  };
+
   // Helper function to convert trades to CSV
   const convertTradesToCSV = (trades: Trade[]): string => {
-    const headers = ['Date', 'Ticker', 'Action', 'Quantity', 'Price', 'Commission', 'P&L', 'Tags'];
+    const headers = ['Buy Date', 'Sell Date', 'Ticker', 'Status', 'Quantity', 'Buy Price', 'Sell Price', 'P&L', 'Holding Days', 'Commission', 'Tags'];
     const rows = trades.map(trade => [
-      trade.date,
+      trade.buyDate,
+      trade.sellDate || '',
       trade.ticker,
-      trade.action,
+      trade.sellDate ? 'CLOSED' : 'OPEN',
       trade.quantity.toString(),
-      trade.price.toString(),
-      (trade.commission || 0).toString(),
+      trade.buyPrice.toString(),
+      trade.sellPrice?.toString() || '',
       (trade.pnl || 0).toString(),
+      (trade.holdingDays || 0).toString(),
+      (trade.commission || 0).toString(),
       (trade.tags || []).join(';')
     ]);
     
@@ -220,10 +334,28 @@ export default function TradesPage() {
             Manage and analyze your trading records
           </p>
         </div>
-        <Button>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Trade
-        </Button>
+        <div className="flex gap-2">
+          <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+            <Button
+              variant={viewMode === 'table' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('table')}
+            >
+              Table View
+            </Button>
+            <Button
+              variant={viewMode === 'csv' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('csv')}
+            >
+              CSV Editor
+            </Button>
+          </div>
+          <Button>
+            <Plus className="w-4 h-4 mr-2" />
+            Add Trade
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -327,12 +459,25 @@ export default function TradesPage() {
               />
             )}
 
-            <TradesList 
-              trades={filteredTrades} 
-              onDeleteTrade={handleDeleteTrade}
-              onBulkDelete={handleBulkDelete}
-              onExportTrades={handleExportTrades}
-            />
+            {viewMode === 'table' ? (
+              <TradesList 
+                trades={filteredTrades} 
+                onDeleteTrade={handleDeleteTrade}
+                onBulkDelete={handleBulkDelete}
+                onExportTrades={handleExportTrades}
+                onUpdateTrade={handleUpdateTrade}
+              />
+            ) : (
+              <CSVTable
+                document={tradesToCSVDocument(filteredTrades || [])}
+                onUpdateCell={handleCSVUpdateCell}
+                onAddRow={handleCSVAddRow}
+                onDeleteRow={handleCSVDeleteRow}
+                onAddColumn={handleCSVAddColumn}
+                onDeleteColumn={handleCSVDeleteColumn}
+                editable={true}
+              />
+            )}
           </div>
         </CardContent>
       </Card>

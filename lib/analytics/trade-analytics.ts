@@ -1,6 +1,6 @@
 import { Trade } from '@/types/trade';
 
-export interface TradeAnalytics {
+export interface TradeAnalyticsData {
   totalPnL: number;
   totalWins: number;
   totalLosses: number;
@@ -36,7 +36,7 @@ export interface PerformanceMetrics {
 }
 
 export class TradeAnalytics {
-  static calculate(trades: Trade[]): TradeAnalytics {
+  static calculate(trades: Trade[]): TradeAnalyticsData {
     if (trades.length === 0) {
       return {
         totalPnL: 0,
@@ -83,7 +83,7 @@ export class TradeAnalytics {
     // Calculate monthly P&L
     const monthlyPnL: Record<string, number> = {};
     tradesWithPnL.forEach(trade => {
-      const month = trade.date.substring(0, 7); // YYYY-MM
+      const month = trade.buyDate.substring(0, 7); // YYYY-MM
       monthlyPnL[month] = (monthlyPnL[month] || 0) + (trade.pnl || 0);
     });
 
@@ -93,8 +93,11 @@ export class TradeAnalytics {
       tickerPnL[trade.ticker] = (tickerPnL[trade.ticker] || 0) + (trade.pnl || 0);
     });
 
-    // Calculate average holding period (placeholder - would need more data)
-    const avgHoldingPeriod = 0;
+    // Calculate average holding period from trades with holding days data
+    const tradesWithHolding = trades.filter(t => t.holdingDays !== undefined && t.holdingDays !== null);
+    const avgHoldingPeriod = tradesWithHolding.length > 0 
+      ? tradesWithHolding.reduce((sum, trade) => sum + (trade.holdingDays || 0), 0) / tradesWithHolding.length
+      : 0;
 
     return {
       totalPnL,

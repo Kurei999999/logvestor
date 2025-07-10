@@ -224,7 +224,7 @@ export function ImageUploader({ trades, onUpload, onCancel }: ImageUploaderProps
             <SelectContent>
               {trades.map(trade => (
                 <SelectItem key={trade.id} value={trade.id}>
-                  {trade.ticker} - {trade.action.toUpperCase()} - {trade.date}
+                  {trade.ticker} - {trade.sellDate ? 'CLOSED' : 'OPEN'} - {trade.buyDate}
                 </SelectItem>
               ))}
             </SelectContent>

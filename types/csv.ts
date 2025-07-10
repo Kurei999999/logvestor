@@ -9,20 +9,16 @@ export interface CSVMapping {
   name: string;
   description?: string;
   columnMapping: {
-    date: string;
+    buyDate: string;
     ticker: string;
-    action: string;
+    buyPrice: string;
     quantity: string;
-    price: string;
+    sellDate?: string;
+    sellPrice?: string;
     commission?: string;
-    pnl?: string;
     [key: string]: string | undefined;
   };
   dateFormat: string;
-  actionMapping: {
-    buy: string[];
-    sell: string[];
-  };
   numberFormat?: {
     decimalSeparator?: string;
     thousandsSeparator?: string;

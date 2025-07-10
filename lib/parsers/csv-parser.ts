@@ -24,7 +24,7 @@ export class CSVParser {
             rawData: results.data as string[][]
           });
         },
-        error: (error) => {
+        error: (error: any) => {
           reject(error);
         }
       });
@@ -52,7 +52,7 @@ export class CSVParser {
             rawData: results.data as string[][]
           });
         },
-        error: (error) => {
+        error: (error: any) => {
           reject(error);
         }
       });

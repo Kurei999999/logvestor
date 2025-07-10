@@ -63,7 +63,7 @@ export class ElectronFileService implements IDataService {
 
   async setDataDirectory(directory: string): Promise<ServiceResponse<void>> {
     this.dataDirectory = directory;
-    return { success: true, data: undefined };
+    return { success: true, data: undefined, timestamp: Date.now() };
   }
 
   async getTrades(): Promise<ServiceResponse<Trade[]>> {
