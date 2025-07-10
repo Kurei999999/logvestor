@@ -55,8 +55,9 @@ The application follows a local-first architecture with these key concepts:
 6. **Advanced Search & Filtering**: Full-text search, debounced performance, multiple filter criteria
 7. **Filter Presets**: Save and manage commonly used filter combinations
 8. **Bulk Operations**: Bulk select, delete, and export trades
+9. **CSV Viewer/Editor**: Flexible CSV data management without mapping requirements
 
-### Directory Structure (Planned)
+### Directory Structure (Current)
 ```
 app/
 ├── (main)/
@@ -64,6 +65,7 @@ app/
 │   ├── trades/        # Trade listing and details
 │   ├── gallery/       # Image gallery views
 │   ├── analytics/     # Analysis and reporting
+│   ├── csv-viewer/    # CSV viewer/editor (implemented)
 │   └── import/        # CSV import functionality
 └── api/               # Electron IPC communication
 
@@ -71,15 +73,22 @@ components/
 ├── ui/                # Shadcn/ui components
 ├── trade/             # Trade-specific components
 ├── gallery/           # Gallery components
-└── analytics/         # Analytics components
+├── analytics/         # Analytics components
+└── csv-viewer/        # CSV viewer components (implemented)
 
 lib/
 ├── file-system/       # File operations
+│   └── csv-storage.ts # CSV document storage (implemented)
 ├── parsers/           # CSV/Excel/MD parsing
 ├── csv-mapper/        # CSV mapping logic
 ├── trade-linker/      # CSV-MD linking
 ├── trade-filters/     # Filter presets management
 └── utils/             # Utilities (search, debounce)
+
+types/
+├── trade.ts           # Trade-related types
+├── csv.ts             # Legacy CSV import types
+└── csv-viewer.ts      # CSV viewer types (implemented)
 
 electron/              # Electron main process
 ├── main.js            # Main process entry point
@@ -138,8 +147,12 @@ Based on completed GitHub issues:
 ### Phase 3 Completed:
 - **Electron Integration** (#7): Full desktop application functionality
 
+### Phase 4 Completed:
+- **CSV Viewer/Editor** (#15): Flexible CSV data management without mapping requirements
+
 ### Currently Open:
 - **Export and Backup Functionality** (#3): In progress
+- **Enhanced Trade Import** (#16): フォーマット準拠 + カスタムカラム統合 (planned)
 
 ## API Services
 
@@ -164,3 +177,36 @@ Available IPC channels for Electron communication:
 - `file:create-directory`
 - `dialog:select-file`
 - `dialog:select-directory`
+
+## CSV Management System
+
+### CSV Viewer/Editor (Implemented - Issue #15)
+A flexible CSV data management system that allows users to view and edit CSV files without complex mapping requirements.
+
+**Key Features:**
+- **No Mapping Required**: Display CSV files exactly as they are
+- **Excel-like Editing**: Click-to-edit cells, add/delete rows and columns
+- **Flexible Structure**: Support for any CSV column structure
+- **Document Management**: Multiple CSV documents with metadata
+- **Export Capabilities**: Export as CSV or JSON
+- **Storage Management**: LocalStorage with usage monitoring
+
+**Components:**
+- `CSVTable`: Excel-like table with editing capabilities
+- `CSVUploader`: Drag & drop file upload
+- `CSVViewer`: Main viewer component
+- `CSVStorage`: LocalStorage-based document management
+
+**Use Cases:**
+- Data exploration (checking CSV structure)
+- General spreadsheet operations
+- Non-investment data management
+- Quick CSV editing without setup
+
+### Enhanced Trade Import (Planned - Issue #16)
+Integration of CSV Viewer flexibility with Trade analytics capabilities.
+
+**Concept**: "Follow format for analytics, but add custom fields for flexibility"
+- Basic Trade fields (date, ticker, action, quantity, price) for analytics
+- Custom fields for user-specific data
+- Best of both worlds: structure + flexibility
