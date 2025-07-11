@@ -158,8 +158,8 @@ export function MarkdownSideEditorV3({
         
         // Set up file change listener
         const handleFileChange = (_: any, data: any) => {
-          if (data.watchId === watchId && data.filePath.endsWith(memoFile) && isPreview) {
-            // File changed, reload content
+          if (data.watchId === watchId && data.filePath.endsWith(memoFile) && !isPreview) {
+            // File changed externally while editing, reload content
             loadMemoContent();
           }
         };
@@ -193,7 +193,7 @@ ${trade.pnl ? `- **P&L**: $${trade.pnl.toFixed(2)}` : ''}
 `;
       setContent(template);
     }
-  }, [memoFile, trade, config, isPreview, loadMemoContent]);
+  }, [memoFile, trade, config, loadMemoContent]);
 
   const handleSave = async () => {
     if (!config) {
@@ -494,7 +494,7 @@ ${trade.pnl ? `- **P&L**: $${trade.pnl.toFixed(2)}` : ''}
           </div>
         ) : isPreview ? (
           <div className="h-full overflow-y-auto p-6">
-            <div className="prose prose-sm max-w-none">
+            <div className="prose prose-sm max-w-none prose-gray">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 rehypePlugins={[rehypeHighlight]}
@@ -506,7 +506,30 @@ ${trade.pnl ? `- **P&L**: $${trade.pnl.toFixed(2)}` : ''}
                       title={title as string}
                       folderPath={getTradeFolderPath() || undefined}
                     />
-                  )
+                  ),
+                  h1: ({ children }) => <h1 className="text-2xl font-bold text-gray-900 mb-4 mt-6 border-b border-gray-200 pb-2">{children}</h1>,
+                  h2: ({ children }) => <h2 className="text-xl font-bold text-gray-900 mb-3 mt-5 border-b border-gray-200 pb-1">{children}</h2>,
+                  h3: ({ children }) => <h3 className="text-lg font-semibold text-gray-900 mb-2 mt-4">{children}</h3>,
+                  h4: ({ children }) => <h4 className="text-base font-semibold text-gray-900 mb-2 mt-3">{children}</h4>,
+                  h5: ({ children }) => <h5 className="text-sm font-semibold text-gray-900 mb-1 mt-2">{children}</h5>,
+                  h6: ({ children }) => <h6 className="text-sm font-semibold text-gray-900 mb-1 mt-2">{children}</h6>,
+                  ul: ({ children }) => <ul className="list-disc pl-6 mb-4 space-y-1">{children}</ul>,
+                  ol: ({ children }) => <ol className="list-decimal pl-6 mb-4 space-y-1">{children}</ol>,
+                  li: ({ children }) => <li className="text-gray-800 leading-relaxed">{children}</li>,
+                  p: ({ children }) => <p className="mb-4 text-gray-800 leading-relaxed">{children}</p>,
+                  blockquote: ({ children }) => <blockquote className="border-l-4 border-blue-500 pl-4 italic text-gray-700 mb-4 bg-blue-50 py-2">{children}</blockquote>,
+                  code: ({ children }) => <code className="bg-gray-100 text-red-600 px-1 py-0.5 rounded text-sm font-mono">{children}</code>,
+                  pre: ({ children }) => <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto mb-4 text-sm">{children}</pre>,
+                  strong: ({ children }) => <strong className="font-bold text-gray-900">{children}</strong>,
+                  em: ({ children }) => <em className="italic text-gray-800">{children}</em>,
+                  a: ({ href, children }) => <a href={href} className="text-blue-600 hover:text-blue-800 underline" target="_blank" rel="noopener noreferrer">{children}</a>,
+                  table: ({ children }) => <table className="w-full border-collapse border border-gray-300 mb-4">{children}</table>,
+                  thead: ({ children }) => <thead className="bg-gray-50">{children}</thead>,
+                  tbody: ({ children }) => <tbody>{children}</tbody>,
+                  tr: ({ children }) => <tr className="border-b border-gray-200">{children}</tr>,
+                  th: ({ children }) => <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">{children}</th>,
+                  td: ({ children }) => <td className="border border-gray-300 px-4 py-2 text-gray-800">{children}</td>,
+                  hr: () => <hr className="border-t-2 border-gray-200 my-6" />
                 }}
               >
                 {content}
