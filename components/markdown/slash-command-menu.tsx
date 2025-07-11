@@ -66,7 +66,7 @@ export function SlashCommandMenu({
   return (
     <div
       ref={menuRef}
-      className="absolute z-[100] bg-white rounded-lg shadow-lg border border-gray-200 py-2 w-64 max-h-64 overflow-y-auto"
+      className="absolute z-[100] bg-white rounded-lg shadow-lg border border-gray-200 py-2 w-72 max-h-80 overflow-y-auto"
       style={{
         top: position.top,
         left: position.left,
