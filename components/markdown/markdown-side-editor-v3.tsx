@@ -22,7 +22,13 @@ import {
   Hash,
   Link,
   List,
-  Code
+  Code,
+  Bold,
+  Italic,
+  Quote,
+  Minus,
+  Type,
+  Table2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Trade } from '@/types/trade';
@@ -340,8 +346,108 @@ ${trade.pnl ? `- **P&L**: $${trade.pnl.toFixed(2)}` : ''}
     }
   }, [config, trade, getTradeFolderPath, replaceCommand]);
 
-  // Define slash commands
+  // Define slash commands - organized by category
   const slashCommands: SlashCommand[] = [
+    // Headers
+    {
+      id: 'h1',
+      name: 'Large Heading',
+      description: 'Create a large heading (H1)',
+      icon: <Type className="w-4 h-4 text-gray-600" />,
+      handler: () => replaceCommand('# ')
+    },
+    {
+      id: 'h2',
+      name: 'Medium Heading',
+      description: 'Create a medium heading (H2)',
+      icon: <Hash className="w-4 h-4 text-gray-600" />,
+      handler: () => replaceCommand('## ')
+    },
+    {
+      id: 'h3',
+      name: 'Small Heading',
+      description: 'Create a small heading (H3)',
+      icon: <Hash className="w-4 h-4 text-gray-600" />,
+      handler: () => replaceCommand('### ')
+    },
+    
+    // Formatting
+    {
+      id: 'bold',
+      name: 'Bold Text',
+      description: 'Make text bold',
+      icon: <Bold className="w-4 h-4 text-gray-600" />,
+      handler: () => replaceCommand('**bold text**')
+    },
+    {
+      id: 'italic',
+      name: 'Italic Text',
+      description: 'Make text italic',
+      icon: <Italic className="w-4 h-4 text-gray-600" />,
+      handler: () => replaceCommand('*italic text*')
+    },
+    {
+      id: 'code-inline',
+      name: 'Inline Code',
+      description: 'Insert inline code',
+      icon: <Code className="w-4 h-4 text-gray-600" />,
+      handler: () => replaceCommand('`code`')
+    },
+    
+    // Lists
+    {
+      id: 'bullet-list',
+      name: 'Bullet List',
+      description: 'Create a bullet list',
+      icon: <List className="w-4 h-4 text-gray-600" />,
+      handler: () => replaceCommand('- ')
+    },
+    {
+      id: 'numbered-list',
+      name: 'Numbered List',
+      description: 'Create a numbered list',
+      icon: <List className="w-4 h-4 text-gray-600" />,
+      handler: () => replaceCommand('1. ')
+    },
+    
+    // Blocks
+    {
+      id: 'code-block',
+      name: 'Code Block',
+      description: 'Insert a code block',
+      icon: <Code className="w-4 h-4 text-gray-600" />,
+      handler: () => replaceCommand('```\n\n```')
+    },
+    {
+      id: 'quote',
+      name: 'Quote',
+      description: 'Create a blockquote',
+      icon: <Quote className="w-4 h-4 text-gray-600" />,
+      handler: () => replaceCommand('> ')
+    },
+    {
+      id: 'note',
+      name: 'Note Block',
+      description: 'Create a note/callout block',
+      icon: <FileText className="w-4 h-4 text-gray-600" />,
+      handler: () => replaceCommand('> **Note**: ')
+    },
+    {
+      id: 'divider',
+      name: 'Divider',
+      description: 'Insert a horizontal divider',
+      icon: <Minus className="w-4 h-4 text-gray-600" />,
+      handler: () => replaceCommand('\n---\n')
+    },
+    
+    // Links and Media
+    {
+      id: 'link',
+      name: 'Link',
+      description: 'Insert a link',
+      icon: <Link className="w-4 h-4 text-gray-600" />,
+      handler: () => replaceCommand('[link text](https://example.com)')
+    },
     {
       id: 'image',
       name: 'Image',
@@ -349,40 +455,14 @@ ${trade.pnl ? `- **P&L**: $${trade.pnl.toFixed(2)}` : ''}
       icon: <Image className="w-4 h-4 text-gray-600" />,
       handler: handleImageCommand
     },
+    
+    // Tables
     {
-      id: 'heading',
-      name: 'Heading',
-      description: 'Create a heading',
-      icon: <Hash className="w-4 h-4 text-gray-600" />,
-      handler: () => replaceCommand('## ')
-    },
-    {
-      id: 'link',
-      name: 'Link',
-      description: 'Insert a link',
-      icon: <Link className="w-4 h-4 text-gray-600" />,
-      handler: () => replaceCommand('[link text](https://)')
-    },
-    {
-      id: 'list',
-      name: 'Bullet List',
-      description: 'Create a bullet list',
-      icon: <List className="w-4 h-4 text-gray-600" />,
-      handler: () => replaceCommand('- ')
-    },
-    {
-      id: 'code',
-      name: 'Code Block',
-      description: 'Insert a code block',
-      icon: <Code className="w-4 h-4 text-gray-600" />,
-      handler: () => replaceCommand('```\n\n```')
-    },
-    {
-      id: 'note',
-      name: 'Note',
-      description: 'Create a note/callout',
-      icon: <FileText className="w-4 h-4 text-gray-600" />,
-      handler: () => replaceCommand('> **Note**: ')
+      id: 'table',
+      name: 'Table',
+      description: 'Insert a table',
+      icon: <Table2 className="w-4 h-4 text-gray-600" />,
+      handler: () => replaceCommand('| Header 1 | Header 2 | Header 3 |\n|----------|----------|----------|\n| Cell 1   | Cell 2   | Cell 3   |\n| Cell 4   | Cell 5   | Cell 6   |')
     }
   ];
 
