@@ -8,7 +8,6 @@ export interface TradeAnalyticsData {
   avgWin: number;
   avgLoss: number;
   totalTrades: number;
-  totalCommissions: number;
   netPnL: number;
   profitFactor: number;
   largestWin: number;
@@ -46,7 +45,6 @@ export class TradeAnalytics {
         avgWin: 0,
         avgLoss: 0,
         totalTrades: 0,
-        totalCommissions: 0,
         netPnL: 0,
         profitFactor: 0,
         largestWin: 0,
@@ -59,8 +57,7 @@ export class TradeAnalytics {
 
     const tradesWithPnL = trades.filter(t => t.pnl !== undefined && t.pnl !== null);
     const totalPnL = tradesWithPnL.reduce((sum, trade) => sum + (trade.pnl || 0), 0);
-    const totalCommissions = trades.reduce((sum, trade) => sum + (trade.commission || 0), 0);
-    const netPnL = totalPnL - totalCommissions;
+    const netPnL = totalPnL;
 
     const wins = tradesWithPnL.filter(t => (t.pnl || 0) > 0);
     const losses = tradesWithPnL.filter(t => (t.pnl || 0) < 0);
@@ -107,7 +104,6 @@ export class TradeAnalytics {
       avgWin,
       avgLoss,
       totalTrades: tradesWithPnL.length,
-      totalCommissions,
       netPnL,
       profitFactor,
       largestWin,

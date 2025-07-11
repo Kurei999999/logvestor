@@ -8,6 +8,7 @@ declare global {
   interface Window {
     electronAPI: {
       fs: {
+        readImageAsDataUrl: any;
         readFile: (filePath: string) => Promise<{ success: boolean; data?: string; error?: string }>;
         writeFile: (filePath: string, data: string) => Promise<{ success: boolean; error?: string }>;
         readDir: (dirPath: string) => Promise<{ success: boolean; data?: FileSystemItem[]; error?: string }>;
