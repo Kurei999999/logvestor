@@ -13,10 +13,8 @@ export interface CentralCSVRecord {
   quantity: number;
   buyPrice: number;
   sellPrice?: number;
-  commission: number;
   pnl?: number;
   holdingDays?: number;
-  tags: string; // Comma-separated tags
   folderPath: string; // Relative path to trade folder
   createdAt: string; // ISO timestamp
   updatedAt: string; // ISO timestamp
@@ -57,10 +55,8 @@ export class CentralCSVService {
         'quantity',
         'buyPrice',
         'sellPrice',
-        'commission',
         'pnl',
         'holdingDays',
-        'tags',
         'folderPath',
         'createdAt',
         'updatedAt'
@@ -104,13 +100,11 @@ export class CentralCSVService {
             quantity: parseFloat(values[4]) || 0,
             buyPrice: parseFloat(values[5]) || 0,
             sellPrice: values[6] ? parseFloat(values[6]) : undefined,
-            commission: parseFloat(values[7]) || 0,
-            pnl: values[8] ? parseFloat(values[8]) : undefined,
-            holdingDays: values[9] ? parseInt(values[9]) : undefined,
-            tags: values[10] || '',
-            folderPath: values[11],
-            createdAt: values[12],
-            updatedAt: values[13]
+            pnl: values[7] ? parseFloat(values[7]) : undefined,
+            holdingDays: values[8] ? parseInt(values[8]) : undefined,
+            folderPath: values[9],
+            createdAt: values[10],
+            updatedAt: values[11]
           };
           records.push(record);
         }
@@ -227,10 +221,8 @@ export class CentralCSVService {
       quantity: trade.quantity,
       buyPrice: trade.buyPrice,
       sellPrice: trade.sellPrice,
-      commission: trade.commission || 0,
       pnl: trade.pnl,
       holdingDays: trade.holdingDays,
-      tags: (trade.tags || []).join(','),
       folderPath
     };
   }
@@ -247,10 +239,10 @@ export class CentralCSVService {
       quantity: record.quantity,
       buyPrice: record.buyPrice,
       sellPrice: record.sellPrice,
-      commission: record.commission,
+      commission: 0, // Default value since removed from CSV
       pnl: record.pnl,
       holdingDays: record.holdingDays,
-      tags: record.tags ? record.tags.split(',').filter(tag => tag.trim()) : [],
+      tags: [], // Default empty array since removed from CSV
       notesFiles: [], // Will be populated by scanning folder
       createdAt: record.createdAt,
       updatedAt: record.updatedAt
@@ -402,10 +394,8 @@ export class CentralCSVService {
       record.quantity.toString(),
       record.buyPrice.toString(),
       record.sellPrice?.toString() || '',
-      record.commission.toString(),
       record.pnl?.toString() || '',
       record.holdingDays?.toString() || '',
-      record.tags || '',
       record.folderPath,
       record.createdAt,
       record.updatedAt
@@ -430,10 +420,8 @@ export class CentralCSVService {
         'quantity',
         'buyPrice',
         'sellPrice',
-        'commission',
         'pnl',
         'holdingDays',
-        'tags',
         'folderPath',
         'createdAt',
         'updatedAt'

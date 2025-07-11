@@ -15,7 +15,11 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
-      webSecurity: true
+      webSecurity: true,
+      allowRunningInsecureContent: false,
+      experimentalFeatures: false,
+      enableRemoteModule: false,
+      sandbox: false // Keep false to allow preload script access
     },
     icon: path.join(__dirname, 'assets/icon.png'),
     titleBarStyle: 'default',
@@ -27,6 +31,33 @@ function createWindow() {
     : `file://${path.join(__dirname, '../out/index.html')}`;
 
   mainWindow.loadURL(startUrl);
+
+  // Set security headers and CSP
+  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          [
+            "default-src 'self'",
+            "script-src 'self' 'unsafe-inline'", // Allow inline scripts for React hydration
+            "style-src 'self' 'unsafe-inline'", // Allow inline styles for CSS-in-JS  
+            "img-src 'self' data: blob: file:", // Allow local images and data URLs
+            "font-src 'self' data:",
+            "connect-src 'self'",
+            "frame-src 'none'",
+            "object-src 'none'",
+            "base-uri 'self'",
+            "form-action 'self'"
+          ].join('; ')
+        ],
+        'X-Content-Type-Options': ['nosniff'],
+        'X-Frame-Options': ['DENY'],
+        'X-XSS-Protection': ['1; mode=block'],
+        'Referrer-Policy': ['strict-origin-when-cross-origin']
+      }
+    });
+  });
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();

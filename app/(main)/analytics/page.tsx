@@ -6,30 +6,20 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Trade } from '@/types/trade';
-import { LocalStorage } from '@/lib/file-system/storage';
 import { TradeAnalytics, TradeAnalyticsData } from '@/lib/analytics/trade-analytics';
+import { useTradeData } from '@/lib/hooks/use-trade-data';
 import { BarChart3, TrendingUp, TrendingDown, Target, DollarSign, Activity, Trophy, AlertTriangle } from 'lucide-react';
 
 export default function AnalyticsPage() {
-  const [trades, setTrades] = useState<Trade[]>([]);
+  const { trades, loading, error } = useTradeData();
   const [analytics, setAnalytics] = useState<TradeAnalyticsData | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    try {
-      const loadedTrades = LocalStorage.loadTrades();
-      setTrades(loadedTrades);
-      
-      if (loadedTrades.length > 0) {
-        const analyticsData = TradeAnalytics.calculate(loadedTrades);
-        setAnalytics(analyticsData);
-      }
-    } catch (error) {
-      console.error('Failed to load trades:', error);
-    } finally {
-      setLoading(false);
+    if (!loading && trades.length > 0) {
+      const analyticsData = TradeAnalytics.calculate(trades);
+      setAnalytics(analyticsData);
     }
-  }, []);
+  }, [trades, loading]);
 
   if (loading) {
     return (
@@ -144,7 +134,7 @@ export default function AnalyticsPage() {
                 {TradeAnalytics.formatCurrency(analytics.netPnL)}
               </div>
               <p className="text-xs text-muted-foreground">
-                Commissions: {TradeAnalytics.formatCurrency(analytics.totalCommissions)}
+                Net P&L (same as Total P&L)
               </p>
             </CardContent>
           </Card>
@@ -268,9 +258,11 @@ export default function AnalyticsPage() {
                           </span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-sm">Total Commissions</span>
-                          <span className="text-sm font-medium text-red-600">
-                            {TradeAnalytics.formatCurrency(analytics.totalCommissions)}
+                          <span className="text-sm">Net P&L</span>
+                          <span className={`text-sm font-medium ${
+                            analytics.netPnL > 0 ? 'text-green-600' : 'text-red-600'
+                          }`}>
+                            {TradeAnalytics.formatCurrency(analytics.netPnL)}
                           </span>
                         </div>
                       </div>

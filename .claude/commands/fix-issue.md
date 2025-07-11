@@ -45,3 +45,4 @@ GitHub issue #$ARGUMENTS を解決するために、以下の手順で作業を�
 - Explore 段階での過度な調査禁止
 - Plan 完了時点で必ず人間確認待ち
 - 効率重視、既存パターン最優先
+- GitHub への Commit はせず、サマリのみ作成

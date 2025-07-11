@@ -13,7 +13,8 @@ const electronAPI = {
     exists: (path) => ipcRenderer.invoke('fs:exists', path),
     stat: (path) => ipcRenderer.invoke('fs:stat', path),
     copyFile: (src, dest) => ipcRenderer.invoke('fs:copy-file', src, dest),
-    moveFile: (src, dest) => ipcRenderer.invoke('fs:move-file', src, dest)
+    moveFile: (src, dest) => ipcRenderer.invoke('fs:move-file', src, dest),
+    readImageAsDataUrl: (filePath) => ipcRenderer.invoke('fs:read-image-as-data-url', filePath)
   },
 
   // File Watcher Operations
