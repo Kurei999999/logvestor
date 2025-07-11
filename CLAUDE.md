@@ -160,6 +160,9 @@ The project has been successfully integrated with Electron and includes:
 **Phase 5: Data Structure Restructuring ✅**
 - Trade Data Structure Restructuring (#21): Complete date-based folder hierarchy with central CSV management
 
+**Phase 6: Markdown Editor Enhancement ✅**
+- Slash Commands for Markdown Editor (#24): Advanced content insertion system with keyboard navigation
+
 ### Currently In Progress:
 - Export and Backup Functionality (#3): In progress
 
@@ -199,6 +202,10 @@ Available IPC channels for Electron communication:
 - **MarkdownSideEditor**: Right-side panel with edit/preview modes
 - **VSCode-like Auto-reload**: External file changes reflected automatically
 - **File System Direct Access**: No LocalStorage dependency for memo data
+- **Slash Commands System**: Advanced content insertion with keyboard navigation
+  - `components/markdown/slash-command-menu.tsx`: Command menu with filtering
+  - `lib/hooks/use-slash-commands.ts`: Centralized command logic
+  - Support for headers, lists, formatting, tables, images, and more
 
 ### Trade Data Structure (Issue #21 - ✅ COMPLETE)
 - **Date-based Folder Hierarchy**: `trades/{year}/{ticker}_{MM-DD}_{sequence}/`
