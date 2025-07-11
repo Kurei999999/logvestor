@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { TrendingUp, Upload, FileText, Images } from 'lucide-react';
 import Link from 'next/link';
-import { DashboardSkeleton } from '@/components/loading/dashboard-skeleton';
+import { LoadingSpinner } from '@/components/loading/loading-spinner';
 import PageErrorBoundary from '@/components/page-error-boundary';
 import { useTradeData } from '@/lib/hooks/use-trade-data';
 
@@ -61,7 +61,7 @@ function DashboardContent() {
   }, [trades, tradesLoading]);
 
   if (loading || tradesLoading) {
-    return <DashboardSkeleton />;
+    return <LoadingSpinner size="lg" className="min-h-screen" />;
   }
 
   if (error || tradesError) {

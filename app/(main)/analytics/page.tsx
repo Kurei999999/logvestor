@@ -9,7 +9,7 @@ import { Trade } from '@/types/trade';
 import { TradeAnalytics, TradeAnalyticsData } from '@/lib/analytics/trade-analytics';
 import { useTradeData } from '@/lib/hooks/use-trade-data';
 import { BarChart3, TrendingUp, TrendingDown, Target, DollarSign, Activity, Trophy, AlertTriangle } from 'lucide-react';
-import { DashboardSkeleton } from '@/components/loading/dashboard-skeleton';
+import { LoadingSpinner } from '@/components/loading/loading-spinner';
 import PageErrorBoundary from '@/components/page-error-boundary';
 
 export default function AnalyticsPage() {
@@ -24,7 +24,7 @@ export default function AnalyticsPage() {
   }, [trades, loading]);
 
   if (loading) {
-    return <DashboardSkeleton />;
+    return <LoadingSpinner size="lg" className="min-h-screen" />;
   }
 
   if (error) {

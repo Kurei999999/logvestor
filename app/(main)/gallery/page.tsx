@@ -18,7 +18,7 @@ import {
   Filter,
   Search
 } from 'lucide-react';
-import { GallerySkeleton } from '@/components/loading/gallery-skeleton';
+import { LoadingSpinner } from '@/components/loading/loading-spinner';
 import PageErrorBoundary from '@/components/page-error-boundary';
 
 function GalleryContent() {
@@ -110,7 +110,7 @@ function GalleryContent() {
   }, [images, searchTerm, selectedTicker, sortBy, sortOrder, trades]);
 
   if (loading) {
-    return <GallerySkeleton />;
+    return <LoadingSpinner size="lg" className="min-h-screen" />;
   }
 
   if (error) {
