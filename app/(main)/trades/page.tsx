@@ -16,7 +16,7 @@ import { searchTrades } from '@/lib/utils/search';
 import { debounce } from '@/lib/utils/debounce';
 import { useTradeData } from '@/lib/hooks/use-trade-data';
 import { Plus, Search, Filter, Edit3, FileText, TrendingUp, TrendingDown, Calendar, DollarSign, PenTool, MoreHorizontal, Loader2 } from 'lucide-react';
-import { MarkdownSideEditorV2 as MarkdownSideEditor } from '@/components/markdown/markdown-side-editor-v2';
+import { MarkdownSideEditorV3 as MarkdownSideEditor } from '@/components/markdown/markdown-side-editor-v3';
 import Link from 'next/link';
 
 export default function TradesPage() {

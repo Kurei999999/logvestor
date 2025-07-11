@@ -115,6 +115,43 @@ function initializeIPC(mainWindow) {
     }
   });
 
+  ipcMain.handle('fs:read-image-as-data-url', async (event, filePath) => {
+    try {
+      const data = await fs.readFile(filePath);
+      const ext = path.extname(filePath).toLowerCase();
+      
+      // Determine MIME type
+      let mimeType;
+      switch (ext) {
+        case '.jpg':
+        case '.jpeg':
+          mimeType = 'image/jpeg';
+          break;
+        case '.png':
+          mimeType = 'image/png';
+          break;
+        case '.gif':
+          mimeType = 'image/gif';
+          break;
+        case '.webp':
+          mimeType = 'image/webp';
+          break;
+        case '.svg':
+          mimeType = 'image/svg+xml';
+          break;
+        default:
+          mimeType = 'image/png'; // Default fallback
+      }
+      
+      const base64 = data.toString('base64');
+      const dataUrl = `data:${mimeType};base64,${base64}`;
+      
+      return { success: true, data: dataUrl };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
   // Dialog Operations
   ipcMain.handle('dialog:show-open-dialog', async (event, options) => {
     try {
