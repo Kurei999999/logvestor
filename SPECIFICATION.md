@@ -58,6 +58,8 @@ trade-journal-local/
 │   ├── analytics/
 │   ├── csv-viewer/        # CSVビューア関連コンポーネント ✅ 実装済み
 │   ├── markdown/          # Markdownエディタコンポーネント ✅ 実装済み
+│   │   ├── slash-command-menu.tsx      # スラッシュコマンドメニュー ✅ 実装済み
+│   │   └── markdown-side-editor-v3.tsx # V3エディタ（スラッシュコマンド対応） ✅ 実装済み
 │   └── migration/         # 移行ツールコンポーネント ✅ 実装済み
 ├── electron/              # Electronメインプロセス ✅ 実装済み
 │   ├── main.js           # メインプロセスエントリポイント
@@ -69,6 +71,7 @@ trade-journal-local/
 │   ├── csv/               # CSV管理 ✅ 実装済み
 │   ├── services/          # アプリケーションサービス ✅ 実装済み
 │   ├── hooks/             # React hooks ✅ 実装済み
+│   │   └── use-slash-commands.ts      # スラッシュコマンドロジック ✅ 実装済み
 │   ├── migration/         # データ移行ツール ✅ 実装済み
 │   ├── parsers/           # CSV/Excel/MD解析
 │   ├── csv-mapper/        # CSVマッピング処理
@@ -379,6 +382,27 @@ T002,2024-01-20,AAPL,sell,100,190.00,10.00,430.00,trades/2024/AAPL_01-15_001/exi
 - [x] バックアップシステム: 移行前の自動バックアップ作成
 - [x] 設定ページ: ユーザーフレンドリーな管理インターフェース
 
+### Phase 7: Markdownエディタ機能拡張 (1週間) ✅ 完了
+- [x] **Slash Commands for Markdown Editor（GitHub Issue #24 - ✅ COMPLETE）**
+- [x] スラッシュコマンドメニューシステム
+- [x] キーボードナビゲーション対応（矢印キー、Enter、Escape）
+- [x] 自動位置調整（ビューポート外への対応）
+- [x] フィルタード検索（ユーザー入力に基づく）
+- [x] コマンドカテゴリ実装
+  - [x] ヘッダー（H1、H2、H3）
+  - [x] リスト（箇条書き、番号付き）
+  - [x] フォーマット（太字、斜体、コードブロック）
+  - [x] コンテンツ（引用、区切り線、リンク）
+  - [x] テーブル（自動生成構造）
+  - [x] 画像（altテキスト付き）
+- [x] スマートテキスト挿入
+- [x] 自動カーソル位置調整
+- [x] コンテキスト対応フォーマット
+- [x] TypeScript完全対応
+- [x] フックベースアーキテクチャ（useSlashCommands）
+- [x] アクセシビリティ対応
+- [x] パフォーマンス最適化
+
 ## 8. 非機能要件
 
 ### 8.1 パフォーマンス
@@ -412,6 +436,7 @@ T002,2024-01-20,AAPL,sell,100,190.00,10.00,430.00,trades/2024/AAPL_01-15_001/exi
 - ✅ **Enhanced Trade Import**（Issue #16）
 - ✅ **Markdown Memo Integration**（Issue #19）
 - ✅ **Trade Data Structure Restructuring**（Issue #21 - ✅ 100%完了）
+- ✅ **Slash Commands for Markdown Editor**（Issue #24 - ✅ 完了）
 
 ### 未実装機能
 - ⏳ 自動バックアップ機能（Issue #3で進行中）
