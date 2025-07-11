@@ -372,12 +372,12 @@ export default function TradesPage() {
               placeholder="Search trades..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 border-0 bg-gray-50 focus:bg-white"
+              className="pl-10 border-0 bg-white"
             />
           </div>
           
           <Select value={sortBy} onValueChange={(value: 'date' | 'ticker' | 'pnl' | 'quantity' | 'price') => setSortBy(value)}>
-            <SelectTrigger className="w-32 border-0 bg-gray-50">
+            <SelectTrigger className="w-32 border-0 bg-white">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -391,7 +391,7 @@ export default function TradesPage() {
             variant="outline" 
             size="sm"
             onClick={() => setShowFilters(!showFilters)}
-            className="border-0 bg-gray-50"
+            className="border-0 bg-white"
           >
             <Filter className="w-4 h-4" />
           </Button>
