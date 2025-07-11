@@ -9,6 +9,8 @@ import { Trade } from '@/types/trade';
 import { TradeAnalytics, TradeAnalyticsData } from '@/lib/analytics/trade-analytics';
 import { useTradeData } from '@/lib/hooks/use-trade-data';
 import { BarChart3, TrendingUp, TrendingDown, Target, DollarSign, Activity, Trophy, AlertTriangle } from 'lucide-react';
+import { DashboardSkeleton } from '@/components/loading/dashboard-skeleton';
+import PageErrorBoundary from '@/components/page-error-boundary';
 
 export default function AnalyticsPage() {
   const { trades, loading, error } = useTradeData();
@@ -22,13 +24,16 @@ export default function AnalyticsPage() {
   }, [trades, loading]);
 
   if (loading) {
+    return <DashboardSkeleton />;
+  }
+
+  if (error) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
-          <p className="text-gray-600 mt-2">Loading trading data...</p>
-        </div>
-      </div>
+      <PageErrorBoundary 
+        error={new Error(error)} 
+        retry={() => window.location.reload()}
+        title="Analytics Error"
+      />
     );
   }
 

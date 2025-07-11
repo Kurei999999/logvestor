@@ -18,8 +18,10 @@ import {
   Filter,
   Search
 } from 'lucide-react';
+import { GallerySkeleton } from '@/components/loading/gallery-skeleton';
+import PageErrorBoundary from '@/components/page-error-boundary';
 
-export default function GalleryPage() {
+function GalleryContent() {
   const [images, setImages] = useState<TradeImage[]>([]);
   const [filteredImages, setFilteredImages] = useState<TradeImage[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -29,19 +31,33 @@ export default function GalleryPage() {
   const [selectedTicker, setSelectedTicker] = useState<string>('all');
   const [showUploader, setShowUploader] = useState(false);
   const [trades, setTrades] = useState<Trade[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
   const availableTickers = [...new Set(trades.map(t => t.ticker))];
 
   useEffect(() => {
-    // Load images from localStorage (in a real app, this would scan the file system)
-    const savedImages = localStorage.getItem('tradeImages');
-    if (savedImages) {
-      setImages(JSON.parse(savedImages));
-    }
-    
-    // Load trades
-    const loadedTrades = LocalStorage.loadTrades();
-    setTrades(loadedTrades);
+    const loadGalleryData = async () => {
+      try {
+        setLoading(true);
+        
+        // Load images from localStorage (in a real app, this would scan the file system)
+        const savedImages = localStorage.getItem('tradeImages');
+        if (savedImages) {
+          setImages(JSON.parse(savedImages));
+        }
+        
+        // Load trades
+        const loadedTrades = LocalStorage.loadTrades();
+        setTrades(loadedTrades);
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Failed to load gallery data'));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadGalleryData();
   }, []);
 
   useEffect(() => {
@@ -92,6 +108,20 @@ export default function GalleryPage() {
 
     setFilteredImages(filtered);
   }, [images, searchTerm, selectedTicker, sortBy, sortOrder, trades]);
+
+  if (loading) {
+    return <GallerySkeleton />;
+  }
+
+  if (error) {
+    return (
+      <PageErrorBoundary 
+        error={error} 
+        retry={() => window.location.reload()}
+        title="Gallery Error"
+      />
+    );
+  }
 
   const handleImageUpload = (newImages: TradeImage[]) => {
     const updatedImages = [...images, ...newImages];
@@ -284,4 +314,8 @@ export default function GalleryPage() {
       )}
     </div>
   );
+}
+
+export default function GalleryPage() {
+  return <GalleryContent />;
 }

@@ -296,7 +296,7 @@ export class TradeDataService {
       // Convert to readable CSV format
       const headers = [
         'Trade ID', 'Ticker', 'Buy Date', 'Sell Date', 'Quantity', 
-        'Buy Price', 'Sell Price', 'P&L', 'Holding Days', 'Commission', 'Tags'
+        'Buy Price', 'Sell Price', 'P&L', 'Holding Days'
       ];
 
       const rows = filteredRecords.map(record => [
@@ -308,9 +308,7 @@ export class TradeDataService {
         record.buyPrice.toString(),
         record.sellPrice?.toString() || '',
         record.pnl?.toString() || '',
-        record.holdingDays?.toString() || '',
-        record.commission.toString(),
-        record.tags || ''
+        record.holdingDays?.toString() || ''
       ]);
 
       return [headers, ...rows]
