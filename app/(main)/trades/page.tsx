@@ -1,24 +1,21 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TradesList } from '@/components/trade/trades-list';
 import { CSVTable } from '@/components/csv-viewer/csv-table';
-import { tradesToCSVDocument, csvDocumentToTrades } from '@/lib/utils/trades-csv-converter';
+import { tradesToCSVDocument } from '@/lib/utils/trades-csv-converter';
 import { TradeFilters } from '@/components/trade/trade-filters';
 import { Trade } from '@/types/trade';
 import { TradeFilters as ITradeFilters } from '@/types/app';
-import { LocalStorage } from '@/lib/file-system/storage';
 import { searchTrades } from '@/lib/utils/search';
 import { debounce } from '@/lib/utils/debounce';
 import { useTradeData } from '@/lib/hooks/use-trade-data';
-import { Plus, Search, Filter, Edit3, FileText, TrendingUp, TrendingDown, Calendar, DollarSign, PenTool, MoreHorizontal, Loader2 } from 'lucide-react';
+import { Plus, Search, Filter, Loader2 } from 'lucide-react';
 import { MarkdownSideEditorV3 as MarkdownSideEditor } from '@/components/markdown/markdown-side-editor-v3';
 import { TradeEditModal } from '@/components/trade/trade-edit-modal';
-import Link from 'next/link';
 
 export default function TradesPage() {
   // Use the new unified trade data hook
@@ -31,8 +28,7 @@ export default function TradesPage() {
     deleteTrade,
     bulkDeleteTrades,
     refreshTrades,
-    exportTrades,
-    stats
+    exportTrades
   } = useTradeData();
 
   const [filteredTrades, setFilteredTrades] = useState<Trade[]>([]);
@@ -40,7 +36,7 @@ export default function TradesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'ticker' | 'pnl' | 'quantity' | 'price'>('date');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [sortOrder] = useState<'asc' | 'desc'>('desc');
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<'table' | 'csv'>('table');
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
@@ -223,7 +219,6 @@ export default function TradesPage() {
 
   // CSV Table handlers
   const handleCSVUpdateCell = async (recordId: string, columnName: string, value: any) => {
-    const updates = { [columnName]: value };
     await handleUpdateTrade(recordId, columnName, value);
   };
 
@@ -236,11 +231,12 @@ export default function TradesPage() {
       buyPrice: 0,
       sellDate: '',
       sellPrice: 0,
-      fees: 0,
+      commission: 0,
       pnl: 0,
-      pnlPercent: 0,
       tags: [],
-      notesFiles: []
+      notesFiles: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
     setNewTradeTemplate(newTrade);
     setShowAddTradeModal(true);
@@ -276,25 +272,6 @@ export default function TradesPage() {
     console.log('Delete column not yet implemented:', columnName);
   };
 
-  // Helper function to convert trades to CSV
-  const convertTradesToCSV = (trades: Trade[]): string => {
-    const headers = ['Buy Date', 'Sell Date', 'Ticker', 'Status', 'Quantity', 'Buy Price', 'Sell Price', 'P&L', 'Holding Days', 'Commission', 'Tags'];
-    const rows = trades.map(trade => [
-      trade.buyDate,
-      trade.sellDate || '',
-      trade.ticker,
-      trade.sellDate ? 'CLOSED' : 'OPEN',
-      trade.quantity.toString(),
-      trade.buyPrice.toString(),
-      trade.sellPrice?.toString() || '',
-      (trade.pnl || 0).toString(),
-      (trade.holdingDays || 0).toString(),
-      (trade.commission || 0).toString(),
-      (trade.tags || []).join(';')
-    ]);
-    
-    return [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
-  };
 
   // Helper function to download CSV
   const downloadCSV = (csv: string, filename: string) => {
