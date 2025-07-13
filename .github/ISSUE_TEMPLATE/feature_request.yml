@@ -1,0 +1,52 @@
+name: ✨ Feature Request
+description: Suggest a new feature or improvement.
+title: "[Feature]: "
+labels: [enhancement]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for your suggestion! Please help us understand your request.
+
+  - type: input
+    id: summary
+    attributes:
+      label: Feature Summary
+      description: Briefly describe the feature or improvement.
+      placeholder: e.g. Add dark mode toggle
+    validations:
+      required: true
+
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Use Case
+      description: Why do you need this feature? What problem does it solve?
+      placeholder: Describe a real use case or user story.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Solution
+      description: If you have a specific approach in mind, describe it here.
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Have you considered other options?
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other information, links, mockups, etc.
+    validations:
+      required: false
