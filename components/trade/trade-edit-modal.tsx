@@ -41,9 +41,11 @@ export function TradeEditModal({ trade, isOpen, onClose, onSave }: TradeEditModa
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Edit Trade - {trade.ticker}</DialogTitle>
+          <DialogTitle>{trade.id ? `Edit Trade - ${trade.ticker}` : 'Add New Trade'}</DialogTitle>
           <DialogDescription>
-            Update the trade details below and click Save Changes to apply your modifications.
+            {trade.id 
+              ? 'Update the trade details below and click Save Changes to apply your modifications.'
+              : 'Enter the trade details below and click Save to create a new trade.'}
           </DialogDescription>
         </DialogHeader>
         
@@ -138,7 +140,7 @@ export function TradeEditModal({ trade, isOpen, onClose, onSave }: TradeEditModa
               Cancel
             </Button>
             <Button type="submit">
-              Save Changes
+              {trade.id ? 'Save Changes' : 'Create Trade'}
             </Button>
           </div>
         </form>
