@@ -179,6 +179,9 @@ The project has been successfully integrated with Electron and includes:
 ### Currently In Progress:
 - Export and Backup Functionality (#3): In progress
 
+### Recent Bug Fixes:
+- Add Trade Modal (#31): Fixed issue where Add Trade button created blank CSV files with empty ticker names
+
 ## API Services
 
 ### ElectronFileService

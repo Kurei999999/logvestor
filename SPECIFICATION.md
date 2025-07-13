@@ -140,6 +140,7 @@ trade-journal-local/
   - 同一取引に複数のメモファイルを追加可能
   - ドラッグ&ドロップでの画像追加
   - マークダウンエディタでの詳細記述
+  - 新規取引追加時のモーダル表示（ticker入力必須）
 
 - **記録管理**
   - フォルダ構造での整理（取引ごとにサブフォルダ）
@@ -462,6 +463,12 @@ T002,2024-01-20,AAPL,sell,100,190.00,10.00,430.00,trades/2024/AAPL_01-15_001/exi
   - [x] カテゴリ別アイコンの追加
   - [x] 詳細な説明文の提供
 
+### Phase 10: バグ修正・機能改善 (継続中)
+- [x] **Add Trade Modal実装（GitHub Issue #31 - ✅ 完了）**
+  - 空のtickerでの取引作成を防止
+  - TradeEditModalの新規作成モード対応
+  - モーダルによる必須情報入力の確保
+
 ## 8. 非機能要件
 
 ### 8.1 パフォーマンス
@@ -498,6 +505,7 @@ T002,2024-01-20,AAPL,sell,100,190.00,10.00,430.00,trades/2024/AAPL_01-15_001/exi
 - ✅ **Slash Commands for Markdown Editor**（Issue #24 - ✅ 完了）
 - ✅ **Loading States & Error Handling**（Phase 8 - ✅ 完了）
 - ✅ **Enhanced Markdown Features**（Phase 9 - ✅ 完了）
+- ✅ **Add Trade Modal**（Issue #31 - ✅ 完了）
 
 ### 未実装機能
 - ⏳ 自動バックアップ機能（Issue #3で進行中）
