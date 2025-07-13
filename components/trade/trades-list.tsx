@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -29,6 +29,7 @@ import { Trade } from '@/types/trade';
 import { formatDate, formatCurrency } from '@/lib/utils';
 import { MarkdownEditorModal } from '@/components/markdown/markdown-editor-modal';
 import { TradeNotesDropdown } from './trade-notes-dropdown';
+import { TradeEditModal } from './trade-edit-modal';
 
 interface TradesListProps {
   trades: Trade[];
@@ -43,9 +44,10 @@ interface TradesListProps {
 
 export function TradesList({ trades, onDeleteTrade, onBulkDelete, onExportTrades, onUpdateTrade, onQuickMemo, onOpenMemo, memoRefreshTrigger }: TradesListProps) {
   const [selectedTrades, setSelectedTrades] = useState<string[]>([]);
-  const [editingCell, setEditingCell] = useState<{ tradeId: string; field: string } | null>(null);
-  const [editValue, setEditValue] = useState<string>('');
+  const [selectedTradeForEdit, setSelectedTradeForEdit] = useState<Trade | null>(null);
   const [selectedTradeForMemo, setSelectedTradeForMemo] = useState<Trade | null>(null);
+
+  // console.log('TradesList render - selectedTradeForEdit:', selectedTradeForEdit?.ticker || 'null');
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -69,87 +71,44 @@ export function TradesList({ trades, onDeleteTrade, onBulkDelete, onExportTrades
     }
   };
 
-  const handleCellDoubleClick = (tradeId: string, field: string, currentValue: any) => {
-    if (!onUpdateTrade) return;
+  const handleEditTrade = useCallback((trade: Trade) => {
+    console.log('handleEditTrade called with:', trade.ticker);
+    setSelectedTradeForEdit(trade);
+  }, []);
+
+  const handleSaveEdit = useCallback((updatedTrade: Trade) => {
+    console.log('Modal onSave called with:', updatedTrade);
+    console.log('Original trade:', selectedTradeForEdit);
+    console.log('onUpdateTrade function exists:', !!onUpdateTrade);
     
-    setEditingCell({ tradeId, field });
-    
-    // Format value for editing
-    if (field === 'tags') {
-      setEditValue((currentValue as string[] || []).join(', '));
-    } else if (currentValue !== null && currentValue !== undefined) {
-      setEditValue(currentValue.toString());
-    } else {
-      setEditValue('');
+    if (onUpdateTrade && selectedTradeForEdit) {
+      Object.keys(updatedTrade).forEach(key => {
+        const newValue = updatedTrade[key as keyof Trade];
+        const oldValue = selectedTradeForEdit[key as keyof Trade];
+        
+        // Special handling for date fields
+        let shouldUpdate = false;
+        if (key === 'buyDate' || key === 'sellDate') {
+          const newDateStr = newValue ? new Date(newValue as string).toISOString().split('T')[0] : '';
+          const oldDateStr = oldValue ? new Date(oldValue as string).toISOString().split('T')[0] : '';
+          shouldUpdate = newDateStr !== oldDateStr;
+        } else {
+          shouldUpdate = key !== 'id' && newValue !== oldValue;
+        }
+        
+        if (shouldUpdate) {
+          console.log(`Updating ${key}: ${oldValue} -> ${newValue}`);
+          onUpdateTrade(selectedTradeForEdit.id, key, newValue);
+        }
+      });
     }
-  };
+    setSelectedTradeForEdit(null);
+  }, [onUpdateTrade, selectedTradeForEdit]);
 
-  const handleCellSave = () => {
-    if (!editingCell || !onUpdateTrade) return;
+  const handleCloseEdit = useCallback(() => {
+    setSelectedTradeForEdit(null);
+  }, []);
 
-    const { tradeId, field } = editingCell;
-    let processedValue: any = editValue;
-
-    // Process value based on field type
-    if (field === 'quantity' || field === 'buyPrice' || field === 'sellPrice' || field === 'commission') {
-      processedValue = editValue ? parseFloat(editValue) : undefined;
-    } else if (field === 'tags') {
-      processedValue = editValue
-        .split(',')
-        .map(tag => tag.trim())
-        .filter(tag => tag.length > 0);
-    } else if (field === 'buyDate' || field === 'sellDate') {
-      processedValue = editValue || undefined;
-    }
-
-    onUpdateTrade(tradeId, field, processedValue);
-    setEditingCell(null);
-    setEditValue('');
-  };
-
-  const handleCellCancel = () => {
-    setEditingCell(null);
-    setEditValue('');
-  };
-
-  const renderEditableCell = (trade: Trade, field: string, currentValue: any, displayValue: React.ReactNode) => {
-    const isEditing = editingCell?.tradeId === trade.id && editingCell?.field === field;
-    
-    if (isEditing) {
-      return (
-        <Input
-          value={editValue}
-          onChange={(e) => setEditValue(e.target.value)}
-          onBlur={handleCellSave}
-          onKeyPress={(e) => {
-            if (e.key === 'Enter') {
-              handleCellSave();
-            } else if (e.key === 'Escape') {
-              handleCellCancel();
-            }
-          }}
-          className="h-8 text-sm"
-          type={
-            field === 'quantity' || field === 'buyPrice' || field === 'sellPrice' || field === 'commission' 
-              ? 'number' 
-              : field === 'buyDate' || field === 'sellDate' 
-                ? 'date' 
-                : 'text'
-          }
-          autoFocus
-        />
-      );
-    }
-    
-    return (
-      <div 
-        className={onUpdateTrade ? "cursor-pointer hover:bg-gray-50 p-1 rounded" : ""}
-        onDoubleClick={() => handleCellDoubleClick(trade.id, field, currentValue)}
-      >
-        {displayValue}
-      </div>
-    );
-  };
 
   if (trades.length === 0) {
     return (
@@ -165,18 +124,8 @@ export function TradesList({ trades, onDeleteTrade, onBulkDelete, onExportTrades
 
   return (
     <div className="space-y-4">
-      {onUpdateTrade && (
-        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-          <div className="flex items-center space-x-2">
-            <Edit className="w-4 h-4 text-blue-600" />
-            <span className="text-sm text-blue-700 font-medium">
-              Inline editing enabled - Double-click any cell to edit
-            </span>
-          </div>
-        </div>
-      )}
       <div className="rounded-md border overflow-x-auto">
-        <Table>
+        <Table className="min-w-full">
           <TableHeader>
             <TableRow>
               <TableHead className="w-12">
@@ -187,16 +136,16 @@ export function TradesList({ trades, onDeleteTrade, onBulkDelete, onExportTrades
                   className="rounded border-gray-300"
                 />
               </TableHead>
-              <TableHead>Buy Date</TableHead>
-              <TableHead>Sell Date</TableHead>
-              <TableHead>Ticker</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Quantity</TableHead>
-              <TableHead>Buy Price</TableHead>
-              <TableHead>Sell Price</TableHead>
-              <TableHead>P&L</TableHead>
-              <TableHead>Holding Days</TableHead>
-              <TableHead>Notes</TableHead>
+              <TableHead className="min-w-32 whitespace-nowrap">Buy Date</TableHead>
+              <TableHead className="min-w-32 whitespace-nowrap">Sell Date</TableHead>
+              <TableHead className="min-w-24 whitespace-nowrap">Ticker</TableHead>
+              <TableHead className="min-w-24 whitespace-nowrap">Status</TableHead>
+              <TableHead className="min-w-24 whitespace-nowrap">Quantity</TableHead>
+              <TableHead className="min-w-32 whitespace-nowrap">Buy Price</TableHead>
+              <TableHead className="min-w-32 whitespace-nowrap">Sell Price</TableHead>
+              <TableHead className="min-w-24 whitespace-nowrap">P&L</TableHead>
+              <TableHead className="min-w-32 whitespace-nowrap">Holding Days</TableHead>
+              <TableHead className="min-w-24 whitespace-nowrap">Notes</TableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
@@ -211,37 +160,22 @@ export function TradesList({ trades, onDeleteTrade, onBulkDelete, onExportTrades
                     className="rounded border-gray-300"
                   />
                 </TableCell>
-                <TableCell>
-                  {renderEditableCell(
-                    trade,
-                    'buyDate',
-                    trade.buyDate,
-                    <span className="text-sm">{formatDate(trade.buyDate)}</span>
+                <TableCell className="min-w-32 whitespace-nowrap">
+                  <span className="text-sm">{formatDate(trade.buyDate)}</span>
+                </TableCell>
+                <TableCell className="min-w-32 whitespace-nowrap">
+                  {trade.sellDate ? (
+                    <span className="text-sm text-gray-600">{formatDate(trade.sellDate)}</span>
+                  ) : (
+                    <span className="text-sm text-blue-600">-</span>
                   )}
                 </TableCell>
-                <TableCell>
-                  {renderEditableCell(
-                    trade,
-                    'sellDate',
-                    trade.sellDate,
-                    trade.sellDate ? (
-                      <span className="text-sm text-gray-600">{formatDate(trade.sellDate)}</span>
-                    ) : (
-                      <span className="text-sm text-blue-600">-</span>
-                    )
-                  )}
+                <TableCell className="min-w-24 whitespace-nowrap">
+                  <div className="flex items-center space-x-2">
+                    <span className="font-medium">{trade.ticker}</span>
+                  </div>
                 </TableCell>
-                <TableCell>
-                  {renderEditableCell(
-                    trade,
-                    'ticker',
-                    trade.ticker,
-                    <div className="flex items-center space-x-2">
-                      <span className="font-medium">{trade.ticker}</span>
-                    </div>
-                  )}
-                </TableCell>
-                <TableCell>
+                <TableCell className="min-w-24 whitespace-nowrap">
                   <Badge 
                     variant={trade.sellDate ? 'default' : 'secondary'}
                     className={trade.sellDate ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}
@@ -254,35 +188,20 @@ export function TradesList({ trades, onDeleteTrade, onBulkDelete, onExportTrades
                     {trade.sellDate ? 'CLOSED' : 'OPEN'}
                   </Badge>
                 </TableCell>
-                <TableCell>
-                  {renderEditableCell(
-                    trade,
-                    'quantity',
-                    trade.quantity,
-                    trade.quantity.toLocaleString()
+                <TableCell className="min-w-24 whitespace-nowrap">
+                  {trade.quantity.toLocaleString()}
+                </TableCell>
+                <TableCell className="min-w-32 whitespace-nowrap">
+                  <span className="text-sm">{formatCurrency(trade.buyPrice)}</span>
+                </TableCell>
+                <TableCell className="min-w-32 whitespace-nowrap">
+                  {trade.sellPrice ? (
+                    <span className="text-sm">{formatCurrency(trade.sellPrice)}</span>
+                  ) : (
+                    <span className="text-sm text-gray-400">-</span>
                   )}
                 </TableCell>
-                <TableCell>
-                  {renderEditableCell(
-                    trade,
-                    'buyPrice',
-                    trade.buyPrice,
-                    <span className="text-sm">{formatCurrency(trade.buyPrice)}</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  {renderEditableCell(
-                    trade,
-                    'sellPrice',
-                    trade.sellPrice,
-                    trade.sellPrice ? (
-                      <span className="text-sm">{formatCurrency(trade.sellPrice)}</span>
-                    ) : (
-                      <span className="text-sm text-gray-400">-</span>
-                    )
-                  )}
-                </TableCell>
-                <TableCell>
+                <TableCell className="min-w-24 whitespace-nowrap">
                   {trade.pnl !== undefined ? (
                     <span className={trade.pnl >= 0 ? 'text-green-600' : 'text-red-600'}>
                       {formatCurrency(trade.pnl)}
@@ -291,7 +210,7 @@ export function TradesList({ trades, onDeleteTrade, onBulkDelete, onExportTrades
                     <span className="text-gray-400">-</span>
                   )}
                 </TableCell>
-                <TableCell>
+                <TableCell className="min-w-32 whitespace-nowrap">
                   {trade.holdingDays !== undefined ? (
                     <span className="text-sm text-gray-700">
                       {trade.holdingDays} days
@@ -300,7 +219,7 @@ export function TradesList({ trades, onDeleteTrade, onBulkDelete, onExportTrades
                     <span className="text-gray-400">-</span>
                   )}
                 </TableCell>
-                <TableCell>
+                <TableCell className="min-w-24 whitespace-nowrap">
                   <TradeNotesDropdown
                     trade={trade}
                     onOpenMemo={onOpenMemo}
@@ -321,7 +240,7 @@ export function TradesList({ trades, onDeleteTrade, onBulkDelete, onExportTrades
                         <Eye className="mr-2 h-4 w-4" />
                         View Details
                       </DropdownMenuItem>
-                      <DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleEditTrade(trade)}>
                         <Edit className="mr-2 h-4 w-4" />
                         Edit Trade
                       </DropdownMenuItem>
@@ -385,6 +304,16 @@ export function TradesList({ trades, onDeleteTrade, onBulkDelete, onExportTrades
             </Button>
           </div>
         </div>
+      )}
+
+      {/* Trade Edit Modal */}
+      {selectedTradeForEdit && (
+        <TradeEditModal
+          trade={selectedTradeForEdit}
+          isOpen={!!selectedTradeForEdit}
+          onClose={handleCloseEdit}
+          onSave={handleSaveEdit}
+        />
       )}
 
       {/* Markdown Editor Modal */}

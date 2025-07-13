@@ -130,15 +130,15 @@ export function CSVTable({
         </div>
       )}
 
-      <div className="rounded-md border overflow-auto max-h-96">
-        <Table>
+      <div className="rounded-md border overflow-x-auto overflow-y-auto max-h-96">
+        <Table className="min-w-full">
           <TableHeader>
             <TableRow>
               {editable && <TableHead className="w-12"></TableHead>}
               {(document?.headers || []).map((header) => (
                 <TableHead 
                   key={header} 
-                  className="cursor-pointer hover:bg-gray-50 min-w-32"
+                  className="cursor-pointer hover:bg-gray-50 min-w-48 whitespace-nowrap"
                   onClick={() => handleSort(header)}
                 >
                   <div className="flex items-center justify-between">
@@ -182,19 +182,30 @@ export function CSVTable({
                 {(document?.headers || []).map((header) => (
                   <TableCell 
                     key={header} 
-                    className={editable ? "cursor-pointer hover:bg-gray-50" : ""}
+                    className={editable ? "cursor-pointer hover:bg-gray-50 min-w-48 whitespace-nowrap" : "min-w-48 whitespace-nowrap"}
                     onClick={() => handleCellClick(record.id, header, record.rowData[header])}
                   >
                     {editingCell?.recordId === record.id && editingCell?.columnName === header ? (
                       <Input
                         value={editValue}
                         onChange={(e) => setEditValue(e.target.value)}
-                        onBlur={handleCellSave}
-                        onKeyPress={(e) => {
+                        onKeyDown={(e) => {
                           if (e.key === 'Enter') {
+                            e.preventDefault();
                             handleCellSave();
                           } else if (e.key === 'Escape') {
+                            e.preventDefault();
                             handleCellCancel();
+                          } else if (e.key === 'Tab') {
+                            e.preventDefault();
+                            handleCellSave();
+                          }
+                        }}
+                        onBlur={(e) => {
+                          // Only save if we're not clicking on another input or button
+                          const relatedTarget = e.relatedTarget as HTMLElement;
+                          if (!relatedTarget || (!relatedTarget.matches('input') && !relatedTarget.matches('button'))) {
+                            handleCellSave();
                           }
                         }}
                         className="h-8 text-sm"

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Trade } from '@/types/trade';
 import { Button } from '@/components/ui/button';
 import { getTradeFoldersForTicker } from '@/lib/trade-folder/path-generator';
@@ -32,12 +32,19 @@ interface MemoFileInfo {
   fullPath: string;
 }
 
+// Global cache for memo files
+const memoCache = new Map<string, MemoFileInfo[]>();
+let isCacheInitialized = false;
+
 export function TradeNotesDropdown({ trade, onOpenMemo, onNewMemo, refreshTrigger }: TradeNotesDropdownProps) {
   const [memoFiles, setMemoFiles] = useState<MemoFileInfo[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadMemoFiles = async () => {
+  // Initialize cache on first mount for any trade
+  const initializeCache = async () => {
+    if (isCacheInitialized) return;
+    
     setIsLoading(true);
     setError(null);
     
@@ -61,81 +68,115 @@ export function TradeNotesDropdown({ trade, onOpenMemo, onNewMemo, refreshTrigge
         config = defaultConfigResult.data;
       }
 
-      // Extract year from trade date
-      const year = trade.buyDate.split('-')[0];
-      
-      console.log(`[TradeNotesDropdown] Looking for memos for ${trade.ticker} on ${trade.buyDate} in year ${year}`);
-      console.log(`[TradeNotesDropdown] Base config directory: ${config.dataDirectory}`);
-      
       // Create file service wrapper that uses absolute paths
       const fileServiceWrapper = {
         readDir: async (relativePath: string) => {
           const absolutePath = `${config.dataDirectory}/${relativePath}`;
-          console.log(`[TradeNotesDropdown] Reading directory: ${absolutePath}`);
           return await window.electronAPI.fs.readDir(absolutePath);
         }
       };
-      
-      // Get all trade folders for this ticker in this year
-      const tradeFolders = await getTradeFoldersForTicker(
-        fileServiceWrapper,
-        year,
-        trade.ticker
-      );
 
-      console.log(`[TradeNotesDropdown] Found ${tradeFolders.length} folders for ${trade.ticker}:`, tradeFolders);
-
-      // Find folders that match this trade's date
-      const matchingFolders = tradeFolders.filter(folder => folder.date === trade.buyDate);
+      // Scan all years in trades directory
+      const tradesPath = 'trades';
+      const tradesResult = await window.electronAPI.fs.readDir(`${config.dataDirectory}/${tradesPath}`);
       
-      console.log(`[TradeNotesDropdown] Matching folders for ${trade.buyDate}:`, matchingFolders);
-      
-      const allMemoFiles: MemoFileInfo[] = [];
+      if (tradesResult.success && tradesResult.data) {
+        const years = tradesResult.data
+          .filter(item => item.type === 'directory')
+          .map(item => item.name);
 
-      // Scan each matching folder for markdown files
-      for (const folder of matchingFolders) {
-        const fullFolderPath = `${config.dataDirectory}/${folder.relativePath}`;
-        
-        // Check if folder exists
-        const existsResult = await window.electronAPI.fs.exists(fullFolderPath);
-        if (!existsResult.success || !existsResult.data) {
-          continue;
+        // Load memos for all years
+        for (const year of years) {
+          const yearResult = await window.electronAPI.fs.readDir(`${config.dataDirectory}/${tradesPath}/${year}`);
+          
+          if (yearResult.success && yearResult.data) {
+            const tradeFolders = yearResult.data
+              .filter(item => item.type === 'directory')
+              .map(item => item.name);
+
+            // Process each trade folder
+            for (const folderName of tradeFolders) {
+              const folderPath = `${config.dataDirectory}/${tradesPath}/${year}/${folderName}`;
+              
+              // Read folder contents
+              const folderResult = await window.electronAPI.fs.readDir(folderPath);
+              if (!folderResult.success || !folderResult.data) continue;
+
+              // Find markdown files
+              const mdFiles = folderResult.data
+                .filter(item => item.type === 'file' && item.name.endsWith('.md'))
+                .map(item => ({
+                  fileName: item.name,
+                  folderPath: folderPath,
+                  fullPath: `${folderPath}/${item.name}`
+                }));
+
+              if (mdFiles.length > 0) {
+                // Extract ticker and date from folder name
+                const parts = folderName.split('_');
+                if (parts.length >= 3) {
+                  const ticker = parts[0];
+                  const dateStr = parts[1];
+                  const tradeKey = `${ticker}_${year}-${dateStr}`;
+                  memoCache.set(tradeKey, mdFiles);
+                }
+              }
+            }
+          }
         }
-
-        // Read directory contents
-        const readResult = await window.electronAPI.fs.readDir(fullFolderPath);
-        if (!readResult.success || !readResult.data) {
-          continue;
-        }
-
-        // Filter markdown files and add to list
-        const mdFiles = readResult.data
-          .filter(item => item.type === 'file' && item.name.endsWith('.md'))
-          .map(item => ({
-            fileName: item.name,
-            folderPath: fullFolderPath,
-            fullPath: `${fullFolderPath}/${item.name}`
-          }));
-        
-        console.log(`[TradeNotesDropdown] Found ${mdFiles.length} markdown files in ${fullFolderPath}:`, mdFiles);
-        allMemoFiles.push(...mdFiles);
       }
       
-      console.log(`[TradeNotesDropdown] Final memo files:`, allMemoFiles);
-      setMemoFiles(allMemoFiles);
+      isCacheInitialized = true;
     } catch (err) {
-      console.error('Failed to load memo files:', err);
-      setError('Failed to load memos');
-      setMemoFiles([]);
+      console.error('Failed to initialize memo cache:', err);
+      setError('Failed to initialize memos');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Load on mount and when trade changes or refreshTrigger changes
+  // Get memos for specific trade from cache
+  const getMemosForTrade = (trade: Trade): MemoFileInfo[] => {
+    const year = trade.buyDate.split('-')[0];
+    const dateStr = trade.buyDate.split('-').slice(1).join('-');
+    const tradeKey = `${trade.ticker}_${year}-${dateStr}`;
+    return memoCache.get(tradeKey) || [];
+  };
+
+  // Refresh cache for all trades (called when memo button is pressed)
+  const refreshCache = async () => {
+    isCacheInitialized = false;
+    memoCache.clear();
+    await initializeCache();
+    const updatedMemos = getMemosForTrade(trade);
+    setMemoFiles(updatedMemos);
+  };
+
+  // Initialize cache on component mount
   useEffect(() => {
-    loadMemoFiles();
-  }, [trade.id, refreshTrigger]);
+    initializeCache().then(() => {
+      const memos = getMemosForTrade(trade);
+      setMemoFiles(memos);
+    });
+  }, []);
+
+  // Update memos when refreshTrigger changes
+  useEffect(() => {
+    if (refreshTrigger) {
+      refreshCache();
+    }
+  }, [refreshTrigger]);
+
+  // Handle memo button click - refresh cache
+  const handleNewMemo = useCallback(async (trade: Trade) => {
+    await refreshCache();
+    onNewMemo?.(trade);
+  }, [onNewMemo]);
+
+  const handleOpenMemo = useCallback(async (trade: Trade, memoFile: string, folderPath: string) => {
+    await refreshCache();
+    onOpenMemo?.(trade, memoFile, folderPath);
+  }, [onOpenMemo]);
 
   if (error) {
     return (
@@ -143,29 +184,46 @@ export function TradeNotesDropdown({ trade, onOpenMemo, onNewMemo, refreshTrigge
         variant="ghost"
         size="sm"
         className="h-8 px-2 text-red-500"
-        onClick={loadMemoFiles}
+        onClick={refreshCache}
       >
         <RefreshCw className="w-4 h-4" />
       </Button>
     );
   }
 
-  if (isLoading) {
-    return (
-      <div className="text-sm text-gray-400">Loading...</div>
-    );
-  }
-
+  // Show simple button if no memos
   if (memoFiles.length === 0) {
     return (
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-8 px-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
-        onClick={() => onNewMemo?.(trade)}
-      >
-        <PenTool className="w-4 h-4" />
-      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
+          >
+            {isLoading ? (
+              <RefreshCw className="w-4 h-4 animate-spin" />
+            ) : (
+              <PenTool className="w-4 h-4" />
+            )}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-48">
+          <DropdownMenuLabel>Memos</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {isLoading ? (
+            <div className="p-2 text-sm text-gray-500">Loading...</div>
+          ) : (
+            <DropdownMenuItem 
+              onClick={() => handleNewMemo(trade)}
+              className="text-blue-600"
+            >
+              <PenTool className="mr-2 h-4 w-4" />
+              New Memo
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
     );
   }
 
@@ -191,7 +249,7 @@ export function TradeNotesDropdown({ trade, onOpenMemo, onNewMemo, refreshTrigge
             className="h-6 w-6 p-0"
             onClick={(e) => {
               e.preventDefault();
-              loadMemoFiles();
+              refreshCache();
             }}
           >
             <RefreshCw className="w-3 h-3" />
@@ -201,7 +259,7 @@ export function TradeNotesDropdown({ trade, onOpenMemo, onNewMemo, refreshTrigge
         {memoFiles.map((file, index) => (
           <DropdownMenuItem 
             key={index}
-            onClick={() => onOpenMemo?.(trade, file.fileName, file.folderPath)}
+            onClick={() => handleOpenMemo(trade, file.fileName, file.folderPath)}
             className="cursor-pointer"
           >
             <FileText className="mr-2 h-4 w-4" />
@@ -217,7 +275,7 @@ export function TradeNotesDropdown({ trade, onOpenMemo, onNewMemo, refreshTrigge
         ))}
         <DropdownMenuSeparator />
         <DropdownMenuItem 
-          onClick={() => onNewMemo?.(trade)}
+          onClick={() => handleNewMemo(trade)}
           className="text-blue-600"
         >
           <PenTool className="mr-2 h-4 w-4" />

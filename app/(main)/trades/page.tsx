@@ -209,8 +209,10 @@ export default function TradesPage() {
   };
 
   const handleUpdateTrade = async (tradeId: string, field: string, value: any) => {
+    console.log('handleUpdateTrade called:', { tradeId, field, value });
     const updates = { [field]: value };
     const success = await updateTrade(tradeId, updates);
+    console.log('updateTrade result:', success);
     if (!success) {
       alert('Failed to update trade. Please try again.');
     }
@@ -355,7 +357,7 @@ export default function TradesPage() {
                 CSV
               </Button>
             </div>
-            <Button>
+            <Button onClick={handleCSVAddRow}>
               <Plus className="w-4 h-4 mr-2" />
               New Trade
             </Button>
