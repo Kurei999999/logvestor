@@ -22,16 +22,19 @@ export class TradeFolderService {
   }
 
   /**
-   * Generate folder name for a trade based on configuration pattern
+   * Generate folder name for a trade based on date-based structure
    */
   generateTradeFolderName(trade: Trade): string {
-    const pattern = this.config?.markdownFileNamePattern || '{tradeId}_{ticker}_{date}';
+    // Parse buy date
+    const buyDate = new Date(trade.buyDate);
+    const month = String(buyDate.getMonth() + 1).padStart(2, '0');
+    const day = String(buyDate.getDate()).padStart(2, '0');
+    const dateStr = `${month}-${day}`;
     
-    return pattern
-      .replace('{tradeId}', trade.id)
-      .replace('{ticker}', trade.ticker)
-      .replace('{date}', trade.buyDate)
-      .replace('{type}', 'folder');
+    // For now, assume sequence 001 (this should be improved to find actual sequence)
+    const sequence = '001';
+    
+    return `${trade.ticker}_${dateStr}_${sequence}`;
   }
 
   /**
@@ -56,11 +59,14 @@ export class TradeFolderService {
     }
 
     const folderName = this.generateTradeFolderName(trade);
-    return path.join(
+    const year = new Date(trade.buyDate).getFullYear();
+    const folderPath = path.join(
       this.config.dataDirectory,
       this.config.markdownDirectory || 'trades',
+      year.toString(),
       folderName
     );
+    return folderPath;
   }
 
   /**
@@ -317,6 +323,7 @@ ${trade.pnl ? `- **P&L**: $${trade.pnl}` : ''}
 
       for (const item of items) {
         if (item.type === 'file' && this.isImageFile(item.name)) {
+          // File directly in images folder (no tag)
           const image: TradeImage = {
             id: `${tradeId}_${item.name}`,
             tradeId,
@@ -325,6 +332,53 @@ ${trade.pnl ? `- **P&L**: $${trade.pnl}` : ''}
             relativePath: `images/${item.name}`,
             caption: '',
             tags: [],
+            tag: undefined, // No tag for files in root images folder
+            createdAt: item.lastModified || new Date().toISOString()
+          };
+          images.push(image);
+        } else if (item.type === 'directory') {
+          // Tag folder - load images from tag subfolder
+          const tagFolderPath = path.join(imagesPath, item.name);
+          const tagImages = await this.loadImagesFromTagFolder(tagFolderPath, tradeId, item.name);
+          if (tagImages.success && tagImages.data) {
+            images.push(...tagImages.data);
+          }
+        }
+      }
+
+      return { success: true, data: images };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
+
+  /**
+   * Load images from a specific tag folder
+   */
+  private async loadImagesFromTagFolder(tagFolderPath: string, tradeId: string, tag: string): Promise<{ success: boolean; data?: TradeImage[]; error?: string }> {
+    try {
+      const readResult = await window.electronAPI.fs.readDir(tagFolderPath);
+      if (!readResult.success) {
+        return { success: false, error: readResult.error };
+      }
+
+      const items = readResult.data || [];
+      const images: TradeImage[] = [];
+
+      for (const item of items) {
+        if (item.type === 'file' && this.isImageFile(item.name)) {
+          const image: TradeImage = {
+            id: `${tradeId}_${tag}_${item.name}`,
+            tradeId,
+            fileName: item.name,
+            filePath: path.join(tagFolderPath, item.name),
+            relativePath: `images/${tag}/${item.name}`,
+            caption: '',
+            tags: [],
+            tag: tag, // Tag from folder name
             createdAt: item.lastModified || new Date().toISOString()
           };
           images.push(image);
@@ -348,6 +402,7 @@ ${trade.pnl ? `- **P&L**: $${trade.pnl}` : ''}
     const ext = path.extname(fileName).toLowerCase();
     return imageExtensions.includes(ext);
   }
+
 
   /**
    * Update Trade with notesFiles paths

@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import { MarkdownImage } from './markdown-image';
+import { ImageTagDialog } from './image-tag-dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -60,6 +61,8 @@ export function MarkdownSideEditorV3({
   const [error, setError] = useState<string | null>(null);
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [actualFolderPath, setActualFolderPath] = useState<string | null>(folderPath || null);
+  const [showImageTagDialog, setShowImageTagDialog] = useState(false);
+  const [selectedImageFile, setSelectedImageFile] = useState<{path: string, name: string} | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Slash commands hook
@@ -115,6 +118,36 @@ export function MarkdownSideEditorV3({
     
     // Always use new structure - no fallback to old pattern
     return null; // This will trigger automatic folder creation with sequence
+  };
+
+  // Get folder path for image display (synchronous version that doesn't create folders)
+  const getImageFolderPath = () => {
+    // If we have actualFolderPath (created during save), use it
+    if (actualFolderPath) {
+      return actualFolderPath;
+    }
+    
+    // If folderPath is provided (new structure), use it
+    if (folderPath) {
+      return folderPath;
+    }
+    
+    // For preview mode, we need to construct the expected path even if folder doesn't exist yet
+    // This allows images to be displayed after they've been inserted but before the memo is saved
+    if (config && trade) {
+      // Construct the expected folder path based on trade data
+      const year = new Date(trade.buyDate).getFullYear();
+      const buyDateObj = new Date(trade.buyDate);
+      const month = String(buyDateObj.getMonth() + 1).padStart(2, '0');
+      const day = String(buyDateObj.getDate()).padStart(2, '0');
+      const dateStr = `${month}-${day}`;
+      
+      // For preview, assume sequence 001 (this is just for image display)
+      const folderName = `${trade.ticker}_${dateStr}_001`;
+      return `${config.dataDirectory}/trades/${year}/${folderName}`;
+    }
+    
+    return null;
   };
 
   const loadMemoContent = useCallback(async () => {
@@ -297,54 +330,105 @@ ${trade.pnl ? `- **P&L**: $${trade.pnl.toFixed(2)}` : ''}
         const selectedFile = result.data.filePaths[0];
         const fileName = selectedFile.split('/').pop() || 'image';
         
-        // Get or create folder path
-        let currentFolderPath = getTradeFolderPath();
-        
-        if (!currentFolderPath && config) {
-          if (window.electronAPI?.fs) {
-            const newFolderInfo = await createTradeFolderWithSequence(
-              window.electronAPI.fs,
-              trade.ticker,
-              trade.buyDate,
-              config.dataDirectory
-            );
-            
-            if (newFolderInfo) {
-              currentFolderPath = newFolderInfo.fullPath;
-              setActualFolderPath(currentFolderPath); // Remember the created folder path
-            }
+        // Store selected file info and show tag dialog
+        setSelectedImageFile({ path: selectedFile, name: fileName });
+        setShowImageTagDialog(true);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to select image');
+      console.error('Image command error:', err);
+    }
+  }, []);
+
+  // Handle image tag confirmation
+  const handleImageTagConfirm = useCallback(async (tag: string) => {
+    if (!selectedImageFile) return;
+    
+    setShowImageTagDialog(false);
+    
+    try {
+      // Get or create folder path
+      let currentFolderPath = getTradeFolderPath();
+      
+      if (!currentFolderPath && config) {
+        if (window.electronAPI?.fs) {
+          const newFolderInfo = await createTradeFolderWithSequence(
+            window.electronAPI.fs,
+            trade.ticker,
+            trade.buyDate,
+            config.dataDirectory
+          );
+          
+          if (newFolderInfo) {
+            currentFolderPath = newFolderInfo.fullPath;
+            setActualFolderPath(currentFolderPath); // Remember the created folder path
           }
         }
+      }
+      
+      if (currentFolderPath && window.electronAPI?.fs) {
+        // Ensure we remember the folder path for image preview
+        if (!actualFolderPath) {
+          setActualFolderPath(currentFolderPath);
+        }
         
-        if (currentFolderPath && window.electronAPI?.fs) {
-          // Ensure images folder exists
-          const imagesPath = `${currentFolderPath}/images`;
-          const imagesFolderExists = await window.electronAPI.fs.exists(imagesPath);
-          if (!imagesFolderExists.success || !imagesFolderExists.data) {
-            await window.electronAPI.fs.createDir(imagesPath);
-          }
+        // Ensure images folder exists
+        const imagesPath = `${currentFolderPath}/images`;
+        
+        const imagesFolderExists = await window.electronAPI.fs.exists(imagesPath);
+        if (!imagesFolderExists.success || !imagesFolderExists.data) {
+          await window.electronAPI.fs.createDir(imagesPath);
+        }
+        
+        // Generate filename with timestamp (no tag in filename)
+        const timestamp = new Date().getTime();
+        const fileName = selectedImageFile.name;
+        const uniqueFileName = `${timestamp}_${fileName}`;
+        
+        // Create tag folder if tag is specified
+        let targetPath;
+        let relativePath;
+        
+        if (tag) {
+          // Create tag subfolder: images/tag/
+          const tagFolderPath = `${imagesPath}/${tag}`;
+          const tagFolderResult = await window.electronAPI.fs.createDir(tagFolderPath);
           
-          // Generate unique filename
-          const timestamp = new Date().getTime();
-          const uniqueFileName = `${timestamp}_${fileName}`;
-          const destPath = `${imagesPath}/${uniqueFileName}`;
-          
-          // Copy file
-          const copyResult = await window.electronAPI.fs.copyFile(selectedFile, destPath);
-          if (copyResult.success) {
-            // Insert markdown image syntax (use relative path)
-            const imageMarkdown = `![${fileName}](./images/${uniqueFileName})`;
-            replaceCommand(imageMarkdown);
+          if (tagFolderResult.success) {
+            targetPath = `${tagFolderPath}/${uniqueFileName}`;
+            relativePath = `./images/${tag}/${uniqueFileName}`;
           } else {
-            throw new Error(copyResult.error || 'Failed to copy image');
+            throw new Error(tagFolderResult.error || 'Failed to create tag folder');
           }
+        } else {
+          // No tag, save directly in images folder
+          targetPath = `${imagesPath}/${uniqueFileName}`;
+          relativePath = `./images/${uniqueFileName}`;
+        }
+        
+        // Copy file
+        const copyResult = await window.electronAPI.fs.copyFile(selectedImageFile.path, targetPath);
+        if (copyResult.success) {
+          // Insert markdown image syntax (use relative path)
+          const imageMarkdown = `![${fileName}](${relativePath})`;
+          replaceCommand(imageMarkdown);
+        } else {
+          throw new Error(copyResult.error || 'Failed to copy image');
         }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to insert image');
-      console.error('Image command error:', err);
+      console.error('Image tag confirm error:', err);
+    } finally {
+      setSelectedImageFile(null);
     }
-  }, [config, trade, getTradeFolderPath, replaceCommand]);
+  }, [selectedImageFile, config, trade, getTradeFolderPath, replaceCommand]);
+
+  // Handle image tag dialog close
+  const handleImageTagClose = useCallback(() => {
+    setShowImageTagDialog(false);
+    setSelectedImageFile(null);
+  }, []);
 
   // Define slash commands - organized by category
   const slashCommands: SlashCommand[] = [
@@ -584,7 +668,7 @@ ${trade.pnl ? `- **P&L**: $${trade.pnl.toFixed(2)}` : ''}
                       src={src as string}
                       alt={alt as string}
                       title={title as string}
-                      folderPath={getTradeFolderPath() || undefined}
+                      folderPath={getImageFolderPath() || undefined}
                     />
                   ),
                   h1: ({ children }) => <h1 className="text-2xl font-bold text-gray-900 mb-4 mt-6 border-b border-gray-200 pb-2">{children}</h1>,
@@ -644,6 +728,16 @@ ${trade.pnl ? `- **P&L**: $${trade.pnl.toFixed(2)}` : ''}
           </>
         )}
       </div>
+
+      {/* Image Tag Dialog */}
+      {selectedImageFile && (
+        <ImageTagDialog
+          isOpen={showImageTagDialog}
+          onClose={handleImageTagClose}
+          onConfirm={handleImageTagConfirm}
+          originalFileName={selectedImageFile.name}
+        />
+      )}
     </div>
   );
 }
