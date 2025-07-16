@@ -43,6 +43,7 @@ export interface TradeImage {
   relativePath: string;
   caption?: string;
   tags?: string[];
+  tag?: string; // Single tag extracted from filename (e.g., buy, sell, breakout)
   createdAt: string;
 }
 

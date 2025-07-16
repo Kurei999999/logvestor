@@ -24,10 +24,11 @@ export function MarkdownImage({ src, alt, title, folderPath }: MarkdownImageProp
       }
 
       try {
-        // Handle relative paths
+        // Handle relative paths - support both tag folder structure and direct images
         let fullPath = src;
         if (src.startsWith('./images/')) {
           // Convert relative path to absolute path
+          // Support both: ./images/file.png and ./images/tag/file.png
           fullPath = `${folderPath}/${src.substring(2)}`; // Remove './' prefix
         } else if (src.startsWith('/images/')) {
           // Handle absolute path starting with /images/ (make it relative to folder)

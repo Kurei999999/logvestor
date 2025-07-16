@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -44,6 +44,35 @@ export function ImageGallery({
 }: ImageGalleryProps) {
   const [selectedImage, setSelectedImage] = useState<TradeImage | null>(null);
   const [showImageDialog, setShowImageDialog] = useState(false);
+  const [imageDataUrls, setImageDataUrls] = useState<Record<string, string>>({});
+
+  // Load image data URLs for display
+  useEffect(() => {
+    const loadImageDataUrls = async () => {
+      const newDataUrls: Record<string, string> = {};
+      
+      for (const image of images) {
+        if (!imageDataUrls[image.id] && window.electronAPI?.fs?.readImageAsDataUrl) {
+          try {
+            const result = await window.electronAPI.fs.readImageAsDataUrl(image.filePath);
+            if (result.success && result.data) {
+              newDataUrls[image.id] = result.data;
+            }
+          } catch (error) {
+            console.error('Error loading image data URL:', error);
+          }
+        }
+      }
+      
+      if (Object.keys(newDataUrls).length > 0) {
+        setImageDataUrls(prev => ({ ...prev, ...newDataUrls }));
+      }
+    };
+
+    if (images.length > 0) {
+      loadImageDataUrls();
+    }
+  }, [images, imageDataUrls]);
 
   const getTradeForImage = (image: TradeImage) => {
     return trades.find(trade => trade.id === image.tradeId);
@@ -93,11 +122,17 @@ export function ImageGallery({
                     className="flex-shrink-0 w-24 h-24 bg-gray-100 rounded-lg cursor-pointer overflow-hidden"
                     onClick={() => handleImageClick(image)}
                   >
-                    <img 
-                      src={image.filePath} 
-                      alt={image.fileName}
-                      className="w-full h-full object-cover"
-                    />
+                    {imageDataUrls[image.id] ? (
+                      <img 
+                        src={imageDataUrls[image.id]} 
+                        alt={image.fileName}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                        <span className="text-gray-500 text-xs">Loading...</span>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="flex-1 min-w-0">
@@ -159,9 +194,15 @@ export function ImageGallery({
                       <p className="text-sm text-gray-600 mb-2">{image.caption}</p>
                     )}
                     
-                    {image.tags && image.tags.length > 0 && (
+                    {(image.tag || (image.tags && image.tags.length > 0)) && (
                       <div className="flex flex-wrap gap-1">
-                        {image.tags.map((tag, index) => (
+                        {image.tag && (
+                          <Badge variant="default" className="text-xs">
+                            <Tag className="w-3 h-3 mr-1" />
+                            {image.tag}
+                          </Badge>
+                        )}
+                        {image.tags && image.tags.map((tag, index) => (
                           <Badge key={index} variant="secondary" className="text-xs">
                             <Tag className="w-3 h-3 mr-1" />
                             {tag}
@@ -181,21 +222,27 @@ export function ImageGallery({
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="flex overflow-x-auto space-x-4 pb-4">
         {images.map((image) => {
           const trade = getTradeForImage(image);
           return (
-            <Card key={image.id} className="hover:shadow-md transition-shadow">
+            <Card key={image.id} className="hover:shadow-md transition-shadow flex-shrink-0 w-64">
               <CardContent className="p-4">
                 <div 
                   className="aspect-video bg-gray-100 rounded-lg mb-3 cursor-pointer overflow-hidden"
                   onClick={() => handleImageClick(image)}
                 >
-                  <img 
-                    src={image.filePath} 
-                    alt={image.fileName}
-                    className="w-full h-full object-cover"
-                  />
+                  {imageDataUrls[image.id] ? (
+                    <img 
+                      src={imageDataUrls[image.id]} 
+                      alt={image.fileName}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                      <span className="text-gray-500 text-xs">Loading...</span>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="space-y-2">
@@ -255,14 +302,20 @@ export function ImageGallery({
                     <p className="text-xs text-gray-600 line-clamp-2">{image.caption}</p>
                   )}
                   
-                  {image.tags && image.tags.length > 0 && (
+                  {(image.tag || (image.tags && image.tags.length > 0)) && (
                     <div className="flex flex-wrap gap-1">
-                      {image.tags.slice(0, 2).map((tag, index) => (
+                      {image.tag && (
+                        <Badge variant="default" className="text-xs">
+                          <Tag className="w-3 h-3 mr-1" />
+                          {image.tag}
+                        </Badge>
+                      )}
+                      {image.tags && image.tags.slice(0, 2).map((tag, index) => (
                         <Badge key={index} variant="secondary" className="text-xs">
                           {tag}
                         </Badge>
                       ))}
-                      {image.tags.length > 2 && (
+                      {image.tags && image.tags.length > 2 && (
                         <Badge variant="secondary" className="text-xs">
                           +{image.tags.length - 2}
                         </Badge>
@@ -333,11 +386,17 @@ export function ImageGallery({
               </div>
               
               <div className="flex justify-center">
-                <img 
-                  src={selectedImage.filePath} 
-                  alt={selectedImage.fileName}
-                  className="max-w-full max-h-[60vh] object-contain"
-                />
+                {imageDataUrls[selectedImage.id] ? (
+                  <img 
+                    src={imageDataUrls[selectedImage.id]} 
+                    alt={selectedImage.fileName}
+                    className="max-w-full max-h-[60vh] object-contain"
+                  />
+                ) : (
+                  <div className="w-full h-64 bg-gray-200 flex items-center justify-center">
+                    <span className="text-gray-500">Loading image...</span>
+                  </div>
+                )}
               </div>
               
               {selectedImage.caption && (
@@ -347,11 +406,17 @@ export function ImageGallery({
                 </div>
               )}
               
-              {selectedImage.tags && selectedImage.tags.length > 0 && (
+              {(selectedImage.tag || (selectedImage.tags && selectedImage.tags.length > 0)) && (
                 <div>
                   <h4 className="font-medium mb-2">Tags</h4>
                   <div className="flex flex-wrap gap-1">
-                    {selectedImage.tags.map((tag, index) => (
+                    {selectedImage.tag && (
+                      <Badge variant="default">
+                        <Tag className="w-3 h-3 mr-1" />
+                        {selectedImage.tag}
+                      </Badge>
+                    )}
+                    {selectedImage.tags && selectedImage.tags.map((tag, index) => (
                       <Badge key={index} variant="secondary">
                         <Tag className="w-3 h-3 mr-1" />
                         {tag}

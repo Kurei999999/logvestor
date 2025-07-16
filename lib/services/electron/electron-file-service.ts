@@ -93,6 +93,7 @@ export class ElectronFileService {
       }
 
       const result = await window.electronAPI.trades.loadTrades(this.dataDirectory);
+      
       if (result.success) {
         return { success: true, data: result.data || [], timestamp: Date.now() };
       } else {
