@@ -9,9 +9,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Loader2, 
   CheckCircle, 
@@ -19,12 +17,10 @@ import {
   XCircle, 
   Database, 
   FolderOpen, 
-  Shield, 
-  Trash2,
-  Download,
+  Shield,
   Upload
 } from 'lucide-react';
-import { DataMigrationService, MigrationResult, ValidationResult } from '@/lib/migration/data-migration-service';
+import { DataMigrationService, MigrationResult } from '@/lib/migration/data-migration-service';
 
 interface MigrationToolProps {
   dataDirectory: string;
@@ -34,7 +30,6 @@ interface MigrationToolProps {
 export function MigrationTool({ dataDirectory, fileService }: MigrationToolProps) {
   const [loading, setLoading] = useState(false);
   const [migrationResult, setMigrationResult] = useState<MigrationResult | null>(null);
-  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [progress, setProgress] = useState(0);
   const [currentOperation, setCurrentOperation] = useState<string>('');
 
@@ -84,41 +79,6 @@ export function MigrationTool({ dataDirectory, fileService }: MigrationToolProps
     }
   };
 
-  const handleValidation = async () => {
-    setLoading(true);
-    setCurrentOperation('Validating data integrity...');
-    setProgress(0);
-
-    try {
-      const result = await migrationService.validateDataIntegrity();
-      setValidationResult(result);
-      setProgress(100);
-    } catch (error) {
-      console.error('Validation failed:', error);
-    } finally {
-      setLoading(false);
-      setCurrentOperation('');
-    }
-  };
-
-  const handleCleanup = async () => {
-    setLoading(true);
-    setCurrentOperation('Cleaning up and repairing data...');
-    setProgress(0);
-
-    try {
-      const result = await migrationService.cleanupAndRepair();
-      console.log('Cleanup result:', result);
-      // Refresh validation after cleanup
-      await handleValidation();
-      setProgress(100);
-    } catch (error) {
-      console.error('Cleanup failed:', error);
-    } finally {
-      setLoading(false);
-      setCurrentOperation('');
-    }
-  };
 
   const handleBackup = async () => {
     setLoading(true);
@@ -146,8 +106,8 @@ export function MigrationTool({ dataDirectory, fileService }: MigrationToolProps
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Data Migration & Maintenance</h2>
-          <p className="text-gray-600">Migrate to new folder structure and maintain data integrity</p>
+          <h2 className="text-2xl font-bold">Data Migration & Backup</h2>
+          <p className="text-gray-600">Migrate to new folder structure and create backups</p>
         </div>
         <Button onClick={handleBackup} variant="outline" disabled={loading}>
           <Shield className="w-4 h-4 mr-2" />
@@ -169,14 +129,7 @@ export function MigrationTool({ dataDirectory, fileService }: MigrationToolProps
         </Card>
       )}
 
-      <Tabs defaultValue="migration" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="migration">Migration</TabsTrigger>
-          <TabsTrigger value="validation">Validation</TabsTrigger>
-          <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="migration" className="space-y-4">
+      <div className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -275,128 +228,7 @@ export function MigrationTool({ dataDirectory, fileService }: MigrationToolProps
               )}
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="validation" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <CheckCircle className="w-5 h-5" />
-                <span>Data Integrity Validation</span>
-              </CardTitle>
-              <CardDescription>
-                Check for data consistency and integrity issues
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Button onClick={handleValidation} disabled={loading}>
-                <Database className="w-4 h-4 mr-2" />
-                Validate Data
-              </Button>
-
-              {validationResult && (
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-2">
-                    {validationResult.valid ? (
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                    ) : (
-                      <AlertTriangle className="w-5 h-5 text-yellow-600" />
-                    )}
-                    <span className="font-medium">
-                      {validationResult.valid ? 'Data is valid' : 'Issues found'}
-                    </span>
-                    <Badge variant={validationResult.valid ? 'default' : 'destructive'}>
-                      {validationResult.totalTrades} trades
-                    </Badge>
-                  </div>
-
-                  {!validationResult.valid && (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <div className="text-sm text-gray-600">Missing Folders</div>
-                        <div className="text-xl font-bold text-red-600">
-                          {validationResult.missingFolders.length}
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="text-sm text-gray-600">Orphaned Folders</div>
-                        <div className="text-xl font-bold text-yellow-600">
-                          {validationResult.orphanedFolders.length}
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="text-sm text-gray-600">Duplicate IDs</div>
-                        <div className="text-xl font-bold text-orange-600">
-                          {validationResult.duplicateIds.length}
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="text-sm text-gray-600">Corrupted Records</div>
-                        <div className="text-xl font-bold text-red-600">
-                          {validationResult.corruptedRecords.length}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {validationResult.suggestions.length > 0 && (
-                    <Alert>
-                      <AlertTriangle className="h-4 w-4" />
-                      <AlertDescription>
-                        <div className="space-y-1">
-                          <div className="font-medium">Suggestions:</div>
-                          {validationResult.suggestions.map((suggestion, index) => (
-                            <div key={index} className="text-sm">{suggestion}</div>
-                          ))}
-                        </div>
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="maintenance" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Trash2 className="w-5 h-5" />
-                <span>Data Maintenance</span>
-              </CardTitle>
-              <CardDescription>
-                Clean up and repair data integrity issues
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex space-x-2">
-                <Button 
-                  onClick={handleCleanup} 
-                  disabled={loading}
-                  variant="destructive"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Clean & Repair
-                </Button>
-              </div>
-
-              <Alert>
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  <div className="space-y-1">
-                    <div className="font-medium">Warning:</div>
-                    <div className="text-sm">
-                      This operation will remove duplicate records, create missing folders,
-                      and clean up orphaned data. Make sure to create a backup first.
-                    </div>
-                  </div>
-                </AlertDescription>
-              </Alert>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      </div>
     </div>
   );
 }
