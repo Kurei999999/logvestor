@@ -37,6 +37,7 @@ import { AppConfig } from '@/types/app';
 import { createTradeFolderWithSequence } from '@/lib/trade-folder/path-generator';
 import { SlashCommandMenu, SlashCommand } from './slash-command-menu';
 import { useSlashCommands } from '@/lib/hooks/use-slash-commands';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 export interface MarkdownSideEditorProps {
   trade: Trade;
@@ -63,6 +64,9 @@ export function MarkdownSideEditorV3({
   const [actualFolderPath, setActualFolderPath] = useState<string | null>(folderPath || null);
   const [showImageTagDialog, setShowImageTagDialog] = useState(false);
   const [selectedImageFile, setSelectedImageFile] = useState<{path: string, name: string} | null>(null);
+  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [createdFolderPath, setCreatedFolderPath] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Slash commands hook
@@ -105,6 +109,41 @@ export function MarkdownSideEditorV3({
     loadConfig();
   }, []);
 
+  // Pre-create folder for new memos to fix image preview issue
+  const createFolderForNewMemo = useCallback(async () => {
+    if (!config || memoFile || folderPath || actualFolderPath) return; // Only for new memos
+
+    try {
+      if (window.electronAPI?.fs) {
+        const newFolderInfo = await createTradeFolderWithSequence(
+          window.electronAPI.fs,
+          trade.ticker,
+          trade.buyDate,
+          config.dataDirectory
+        );
+        
+        if (newFolderInfo) {
+          setActualFolderPath(newFolderInfo.fullPath);
+          setCreatedFolderPath(newFolderInfo.fullPath);
+          console.log('Pre-created folder for new memo:', newFolderInfo.fullPath);
+          
+          // Create images subfolder
+          const imagesPath = `${newFolderInfo.fullPath}/images`;
+          await window.electronAPI.fs.createDir(imagesPath);
+        }
+      }
+    } catch (err) {
+      console.error('Error pre-creating folder:', err);
+    }
+  }, [config, memoFile, folderPath, actualFolderPath, trade]);
+
+  // Pre-create folder when config is loaded and this is a new memo
+  useEffect(() => {
+    if (config && !memoFile) {
+      createFolderForNewMemo();
+    }
+  }, [config, memoFile, createFolderForNewMemo]);
+
   const getTradeFolderPath = () => {
     // If we have actualFolderPath (created during save), use it
     if (actualFolderPath) {
@@ -122,13 +161,22 @@ export function MarkdownSideEditorV3({
 
   // Get folder path for image display (synchronous version that doesn't create folders)
   const getImageFolderPath = () => {
+    console.log('getImageFolderPath: Called with state', {
+      actualFolderPath,
+      folderPath,
+      hasConfig: !!config,
+      hasTrade: !!trade
+    });
+
     // If we have actualFolderPath (created during save), use it
     if (actualFolderPath) {
+      console.log('getImageFolderPath: Using actualFolderPath', actualFolderPath);
       return actualFolderPath;
     }
     
     // If folderPath is provided (new structure), use it
     if (folderPath) {
+      console.log('getImageFolderPath: Using provided folderPath', folderPath);
       return folderPath;
     }
     
@@ -144,9 +192,12 @@ export function MarkdownSideEditorV3({
       
       // For preview, assume sequence 001 (this is just for image display)
       const folderName = `${trade.ticker}_${dateStr}_001`;
-      return `${config.dataDirectory}/trades/${year}/${folderName}`;
+      const constructedPath = `${config.dataDirectory}/trades/${year}/${folderName}`;
+      console.log('getImageFolderPath: Constructed path', constructedPath);
+      return constructedPath;
     }
     
+    console.log('getImageFolderPath: No path available, returning null');
     return null;
   };
 
@@ -234,6 +285,65 @@ ${trade.pnl ? `- **P&L**: $${trade.pnl.toFixed(2)}` : ''}
     }
   }, [memoFile, trade, config, loadMemoContent]);
 
+  // Track unsaved changes
+  useEffect(() => {
+    setHasUnsavedChanges(content.trim().length > 0);
+  }, [content]);
+
+  // Cleanup function to delete empty folder
+  const cleanupFolder = useCallback(async () => {
+    if (!createdFolderPath || !window.electronAPI?.fs) return;
+
+    try {
+      // Check if folder exists and is empty (or only contains empty images folder)
+      const exists = await window.electronAPI.fs.exists(createdFolderPath);
+      if (!exists.success || !exists.data) return;
+
+      const dirContents = await window.electronAPI.fs.readDir(createdFolderPath);
+      if (dirContents.success && dirContents.data) {
+        const files = dirContents.data.filter(item => item.type === 'file');
+        const dirs = dirContents.data.filter(item => item.type === 'directory');
+        
+        // If there are no markdown files, we can safely delete
+        const hasMarkdownFiles = files.some(file => file.name.endsWith('.md'));
+        
+        if (!hasMarkdownFiles) {
+          // Check if images folder is empty
+          let canDelete = true;
+          
+          if (dirs.some(dir => dir.name === 'images')) {
+            const imagesPath = `${createdFolderPath}/images`;
+            const imagesDirContents = await window.electronAPI.fs.readDir(imagesPath);
+            if (imagesDirContents.success && imagesDirContents.data) {
+              const imageFiles = imagesDirContents.data.filter(item => item.type === 'file');
+              canDelete = imageFiles.length === 0;
+            }
+          }
+          
+          if (canDelete) {
+            await window.electronAPI.fs.deleteDir(createdFolderPath);
+            console.log('Cleaned up empty folder:', createdFolderPath);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error cleaning up folder:', err);
+    }
+  }, [createdFolderPath]);
+
+  const handleClose = () => {
+    if (hasUnsavedChanges && createdFolderPath && !memoFile) {
+      setShowDiscardDialog(true);
+    } else {
+      onClose();
+    }
+  };
+
+  const handleDiscardConfirm = async () => {
+    await cleanupFolder();
+    onClose();
+  };
+
   const handleSave = async () => {
     if (!config) {
       setError('Configuration not loaded');
@@ -296,6 +406,8 @@ ${trade.pnl ? `- **P&L**: $${trade.pnl.toFixed(2)}` : ''}
         }
         
         console.log('Save successful');
+        setCreatedFolderPath(null); // Clear cleanup state after successful save
+        setHasUnsavedChanges(false);
         onSave?.();
         onClose();
       } else {
@@ -383,7 +495,15 @@ ${trade.pnl ? `- **P&L**: $${trade.pnl.toFixed(2)}` : ''}
         // Generate filename with timestamp (no tag in filename)
         const timestamp = new Date().getTime();
         const fileName = selectedImageFile.name;
-        const uniqueFileName = `${timestamp}_${fileName}`;
+        
+        // Sanitize filename: remove special characters that can cause markdown parsing issues
+        const sanitizedFileName = fileName
+          .replace(/[()[\]{}]/g, '') // Remove brackets and parentheses
+          .replace(/\s+/g, '_') // Replace spaces with underscores
+          .replace(/[^a-zA-Z0-9._-]/g, ''); // Remove other special characters except dots, hyphens, underscores
+        
+        const uniqueFileName = `${timestamp}_${sanitizedFileName}`;
+        console.log('Image filename sanitization:', { original: fileName, sanitized: sanitizedFileName, unique: uniqueFileName });
         
         // Create tag folder if tag is specified
         let targetPath;
@@ -410,7 +530,9 @@ ${trade.pnl ? `- **P&L**: $${trade.pnl.toFixed(2)}` : ''}
         const copyResult = await window.electronAPI.fs.copyFile(selectedImageFile.path, targetPath);
         if (copyResult.success) {
           // Insert markdown image syntax (use relative path)
-          const imageMarkdown = `![${fileName}](${relativePath})`;
+          // Use sanitized filename for alt text as well to avoid markdown parsing issues
+          const imageMarkdown = `![${sanitizedFileName}](${relativePath})`;
+          console.log('Generated markdown:', imageMarkdown);
           replaceCommand(imageMarkdown);
         } else {
           throw new Error(copyResult.error || 'Failed to copy image');
@@ -620,7 +742,7 @@ ${trade.pnl ? `- **P&L**: $${trade.pnl.toFixed(2)}` : ''}
           <Button
             variant="ghost"
             size="icon"
-            onClick={onClose}
+            onClick={handleClose}
           >
             <X className="w-4 h-4" />
           </Button>
@@ -659,18 +781,24 @@ ${trade.pnl ? `- **P&L**: $${trade.pnl.toFixed(2)}` : ''}
         ) : isPreview ? (
           <div className="h-full overflow-y-auto p-6">
             <div className="prose prose-sm max-w-none prose-gray">
+              {console.log('ReactMarkdown content:', content)}
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 rehypePlugins={[rehypeHighlight]}
                 components={{
-                  img: ({ src, alt, title }) => (
-                    <MarkdownImage
-                      src={src as string}
-                      alt={alt as string}
-                      title={title as string}
-                      folderPath={getImageFolderPath() || undefined}
-                    />
-                  ),
+                  img: ({ src, alt, title }) => {
+                    console.log('ReactMarkdown img component called with:', { src, alt, title });
+                    const folderPath = getImageFolderPath();
+                    console.log('ReactMarkdown img folderPath:', folderPath);
+                    return (
+                      <MarkdownImage
+                        src={src as string}
+                        alt={alt as string}
+                        title={title as string}
+                        folderPath={folderPath || undefined}
+                      />
+                    );
+                  },
                   h1: ({ children }) => <h1 className="text-2xl font-bold text-gray-900 mb-4 mt-6 border-b border-gray-200 pb-2">{children}</h1>,
                   h2: ({ children }) => <h2 className="text-xl font-bold text-gray-900 mb-3 mt-5 border-b border-gray-200 pb-1">{children}</h2>,
                   h3: ({ children }) => <h3 className="text-lg font-semibold text-gray-900 mb-2 mt-4">{children}</h3>,
@@ -738,6 +866,18 @@ ${trade.pnl ? `- **P&L**: $${trade.pnl.toFixed(2)}` : ''}
           originalFileName={selectedImageFile.name}
         />
       )}
+
+      {/* Discard Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showDiscardDialog}
+        onClose={() => setShowDiscardDialog(false)}
+        onConfirm={handleDiscardConfirm}
+        title="Discard Changes?"
+        description="You have unsaved changes. Do you want to discard them and delete the created folder?"
+        confirmText="Discard"
+        cancelText="Cancel"
+        variant="destructive"
+      />
     </div>
   );
 }

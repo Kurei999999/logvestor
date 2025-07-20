@@ -17,7 +17,10 @@ export function MarkdownImage({ src, alt, title, folderPath }: MarkdownImageProp
 
   useEffect(() => {
     const loadImage = async () => {
+      console.log('MarkdownImage: Loading image', { src, folderPath });
+      
       if (!src || !folderPath) {
+        console.log('MarkdownImage: Missing src or folderPath', { src, folderPath });
         setError(true);
         setIsLoading(false);
         return;
@@ -42,23 +45,36 @@ export function MarkdownImage({ src, alt, title, folderPath }: MarkdownImageProp
           fullPath = `${folderPath}/${src}`;
         }
 
+        console.log('MarkdownImage: Resolved full path', { originalSrc: src, fullPath });
+
         // Use Electron's readImageAsDataUrl API to get base64 data URL
         if (window.electronAPI?.fs?.readImageAsDataUrl) {
+          console.log('MarkdownImage: Calling readImageAsDataUrl with', fullPath);
           const result = await window.electronAPI.fs.readImageAsDataUrl(fullPath);
+          
+          console.log('MarkdownImage: readImageAsDataUrl result', { 
+            success: result.success, 
+            hasData: !!result.data,
+            error: result.error,
+            fullPath 
+          });
           
           if (result.success && result.data) {
             setImageSrc(result.data);
             setIsLoading(false);
+            console.log('MarkdownImage: Successfully loaded image');
           } else {
+            console.error('MarkdownImage: Failed to load image', result.error);
             setError(true);
             setIsLoading(false);
           }
         } else {
+          console.error('MarkdownImage: Electron API not available');
           setError(true);
           setIsLoading(false);
         }
       } catch (err) {
-        console.error('Error loading image:', err);
+        console.error('MarkdownImage: Error loading image:', err);
         setError(true);
         setIsLoading(false);
       }

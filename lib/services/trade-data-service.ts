@@ -62,7 +62,7 @@ export class TradeDataService {
   }
 
   /**
-   * Add a new trade with automatic folder creation
+   * Add a new trade with automatic folder creation and P&L calculation
    */
   async addTrade(trade: Omit<Trade, 'id' | 'createdAt' | 'updatedAt'>): Promise<Trade | null> {
     try {
@@ -82,7 +82,7 @@ export class TradeDataService {
         return null;
       }
 
-      // Create full trade object
+      // Create full trade object with calculated fields
       const now = new Date().toISOString();
       const fullTrade: Trade = {
         ...trade,
@@ -91,6 +91,9 @@ export class TradeDataService {
         updatedAt: now,
         notesFiles: []
       };
+
+      // Calculate P&L and holding days if sell data exists
+      CentralCSVService.recalculateDerivedFields(fullTrade);
 
       // Add to central CSV
       const csvRecord = CentralCSVService.tradeToCSVRecord(fullTrade, folderInfo.relativePath);
@@ -127,16 +130,8 @@ export class TradeDataService {
         updatedAt: new Date().toISOString()
       };
 
-      // Auto-calculate P&L and holding days
-      if (updatedTrade.sellPrice && updatedTrade.buyPrice && updatedTrade.quantity) {
-        updatedTrade.pnl = (updatedTrade.sellPrice - updatedTrade.buyPrice) * updatedTrade.quantity - (updatedTrade.commission || 0);
-      }
-
-      if (updatedTrade.sellDate && updatedTrade.buyDate) {
-        const buyDate = new Date(updatedTrade.buyDate);
-        const sellDate = new Date(updatedTrade.sellDate);
-        updatedTrade.holdingDays = Math.ceil((sellDate.getTime() - buyDate.getTime()) / (1000 * 60 * 60 * 24));
-      }
+      // Calculate P&L and holding days
+      CentralCSVService.recalculateDerivedFields(updatedTrade);
 
       // Update central CSV
       const csvUpdates = {
@@ -319,4 +314,5 @@ export class TradeDataService {
       return null;
     }
   }
+
 }

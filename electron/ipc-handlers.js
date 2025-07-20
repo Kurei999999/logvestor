@@ -433,7 +433,10 @@ function initializeIPC(mainWindow) {
         markdownEnabled: true,
         markdownDirectory: 'trades',
         autoCreateMarkdownFolders: true,
-        markdownFileNamePattern: '{tradeId}_{ticker}_{date}'
+        markdownFileNamePattern: '{tradeId}_{ticker}_{date}',
+        // Setup configuration
+        setupCompleted: false,
+        setupVersion: '1.0.0'
       };
       return { success: true, data: defaultConfig };
     } catch (error) {
@@ -575,11 +578,12 @@ function initializeIPC(mainWindow) {
             };
 
             // Calculate P&L and holding days if sellDate exists
-            if (trade.sellDate && trade.sellPrice) {
+            if (trade.sellDate && trade.sellPrice && trade.buyPrice && trade.quantity) {
               trade.pnl = (trade.sellPrice - trade.buyPrice) * trade.quantity - (trade.commission || 0);
               const buyDate = new Date(trade.buyDate);
               const sellDate = new Date(trade.sellDate);
-              trade.holdingDays = Math.floor((sellDate.getTime() - buyDate.getTime()) / (1000 * 60 * 60 * 24));
+              const timeDiff = sellDate.getTime() - buyDate.getTime();
+              trade.holdingDays = Math.max(1, Math.ceil(timeDiff / (1000 * 60 * 60 * 24))); // At least 1 day, consistent with service layer
             }
 
             results.push(trade);
