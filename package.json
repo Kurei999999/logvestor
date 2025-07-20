@@ -5,12 +5,12 @@
   "main": "electron/main.js",
   "homepage": "./",
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev --turbopack --port 3001",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "electron": "electron .",
-    "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && NODE_ENV=development electron .\"",
+    "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3001 && NODE_ENV=development NEXT_PORT=3001 electron .\"",
     "electron-build": "npm run build && electron-builder",
     "electron-dist": "npm run build && electron-builder --publish=never"
   },

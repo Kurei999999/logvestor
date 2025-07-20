@@ -27,7 +27,7 @@ function createWindow() {
   });
 
   const startUrl = isDev 
-    ? 'http://localhost:3000' 
+    ? (process.env.NEXT_PORT ? `http://localhost:${process.env.NEXT_PORT}` : 'http://localhost:3001')
     : `file://${path.join(__dirname, '../out/index.html')}`;
 
   mainWindow.loadURL(startUrl);

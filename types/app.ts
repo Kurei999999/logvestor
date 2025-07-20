@@ -17,6 +17,10 @@ export interface AppConfig {
   markdownDirectory?: string; // Relative to dataDirectory (default: 'trades')
   autoCreateMarkdownFolders?: boolean;
   markdownFileNamePattern?: string; // Pattern for markdown file naming
+  
+  // Setup configuration
+  setupCompleted?: boolean;
+  setupVersion?: string;
 }
 
 export interface AppState {

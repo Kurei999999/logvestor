@@ -228,10 +228,10 @@ export class CentralCSVService {
   }
   
   /**
-   * Convert CentralCSVRecord to Trade type
+   * Convert CentralCSVRecord to Trade type with recalculation of derived fields
    */
   static csvRecordToTrade(record: CentralCSVRecord): Trade {
-    return {
+    const trade: Trade = {
       id: record.tradeId,
       ticker: record.ticker,
       buyDate: record.buyDate,
@@ -247,6 +247,34 @@ export class CentralCSVService {
       createdAt: record.createdAt,
       updatedAt: record.updatedAt
     };
+
+    // Recalculate derived fields to ensure consistency
+    CentralCSVService.recalculateDerivedFields(trade);
+    
+    return trade;
+  }
+
+  /**
+   * Recalculate P&L and holding days for a trade
+   * This ensures consistency across all calculation locations
+   */
+  static recalculateDerivedFields(trade: Trade): void {
+    // Reset derived fields first
+    trade.pnl = undefined;
+    trade.holdingDays = undefined;
+
+    // Calculate P&L if we have sell data
+    if (trade.sellPrice && trade.buyPrice && trade.quantity) {
+      trade.pnl = (trade.sellPrice - trade.buyPrice) * trade.quantity - (trade.commission || 0);
+    }
+
+    // Calculate holding days if we have sell date
+    if (trade.sellDate && trade.buyDate) {
+      const buyDate = new Date(trade.buyDate);
+      const sellDate = new Date(trade.sellDate);
+      const timeDiff = sellDate.getTime() - buyDate.getTime();
+      trade.holdingDays = Math.max(1, Math.ceil(timeDiff / (1000 * 60 * 60 * 24))); // At least 1 day
+    }
   }
   
   /**
