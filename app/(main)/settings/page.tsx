@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { MigrationTool } from '@/components/migration/migration-tool';
+import { MCPSetupGuide } from '@/components/setup/mcp-setup-guide';
 import { 
   Settings, 
   Database, 
@@ -201,6 +202,10 @@ export default function SettingsPage() {
                 </Button>
               </CardContent>
             </Card>
+
+            {config && (
+              <MCPSetupGuide dataDirectory={config.dataDirectory} />
+            )}
 
             {fileService && config && (
               <Card>

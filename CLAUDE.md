@@ -179,8 +179,15 @@ The project has been successfully integrated with Electron and includes:
 ### Currently In Progress:
 - Export and Backup Functionality (#3): In progress
 
+### Recent Implementations:
+**Phase 9: Initial Setup & Data Integrity ✅**
+- **Initial Setup Permission Dialog (#45)**: Complete first-time setup experience with directory permission approval
+- **P&L & Holding Period Calculation Fixes**: Consistent calculation logic across all components
+
 ### Recent Bug Fixes:
 - Add Trade Modal (#31): Fixed issue where Add Trade button created blank CSV files with empty ticker names
+- Image Display in Markdown (#44): Fixed special character handling in filenames breaking markdown parsing
+- P&L Calculation Consistency: Standardized calculation methods across IPC handlers, services, and CSV management
 
 ## API Services
 
@@ -264,3 +271,25 @@ Available IPC channels for Electron communication:
   - Gallery: Async data loading with error recovery
   - All pages: Consistent loading and error handling patterns
 - **Code Quality**: Removed obsolete components (unused hooks, old markdown editors)
+
+### Initial Setup System (Issue #45 - ✅ COMPLETE)
+- **Initial Setup Permission Dialog**: Beautiful first-time setup experience
+  - `components/setup/initial-setup-dialog.tsx`: Main setup interface with responsive design
+  - `lib/hooks/use-initial-setup.ts`: Setup state management and directory creation
+  - `components/setup/setup-wrapper.tsx`: App-wide setup flow integration
+- **Directory Management**: Smart folder creation with user approval
+  - Default location recommendation (`~/TradeJournal`)
+  - Custom directory selection with TradeJournal subfolder creation
+  - Automatic structure creation (`trades/`, `portfolios/`, `templates/`, `trades.csv`)
+- **Responsive Design**: Scrollable modal that works on all screen sizes
+- **Error Handling**: Comprehensive validation and user feedback
+- **Setup State Tracking**: Configuration-based setup completion detection
+
+### Data Integrity Improvements (✅ COMPLETE)
+- **P&L Calculation Consistency**: Standardized calculation logic across all components
+  - `CentralCSVService.recalculateDerivedFields()`: Shared calculation method
+  - `TradeDataService`: Consistent calculations in add/update operations
+  - Electron IPC handlers: Aligned with service layer calculations
+- **Holding Period Calculation**: Consistent `Math.ceil` with minimum 1 day
+- **Field Validation**: Proper checks for required fields before calculation
+- **Auto-Recalculation**: Automatic recalculation when loading trades from CSV

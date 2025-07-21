@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { AppConfig } from '@/types/app';
+import { MCPServerService } from '@/lib/services/mcp-server-service';
 
 export interface SetupState {
   isRequired: boolean;
@@ -188,6 +189,16 @@ export function useInitialSetup(): UseInitialSetupReturn {
         console.log('Central CSV file created successfully');
       } else {
         console.log('Central CSV file already exists');
+      }
+
+      // Create MCP server folder and files
+      console.log('Creating MCP server...');
+      try {
+        await MCPServerService.createMCPServer(dataDirectory);
+        console.log('MCP server created successfully');
+      } catch (error) {
+        console.warn('Failed to create MCP server:', error);
+        // Don't fail setup if MCP server creation fails
       }
 
       setSetupState({
