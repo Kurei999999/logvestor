@@ -39,3 +39,97 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Electron-specific
+/dist
+/release
+/electron-dist
+*.log
+*.log.*
+
+# User data directories (should never be committed)
+/TradeJournal
+~/TradeJournal
+/data
+/user-data
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.directory
+.Trash-*
+
+# IDE and editor files
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea
+*.sublime-*
+*.iml
+.project
+.classpath
+
+# Application config (contains user paths)
+/config
+/.config
+/appConfig.json
+/claude_desktop_config.json
+
+# Temporary files
+*.tmp
+*.temp
+*.cache
+.temp/
+.cache/
+
+# Backup files
+*.bak
+*.backup
+*_backup
+/backups
+
+# MCP server local installations (user-specific)
+/logvestor-mcp-server/node_modules
+/*/logvestor-mcp-server/node_modules
+
+# Test data
+/test-data
+/mock-data
+*.test.csv
+*.test.json
+
+# Build artifacts
+/dist-electron
+/app-builds
+*.dmg
+*.app
+*.exe
+*.deb
+*.rpm
+*.AppImage
+*.snap
+*.pkg
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+electron-debug.log*
+
+# Database files (if any future SQLite integration)
+*.db
+*.sqlite
+*.sqlite3
+
+# Lock files (optional - some teams prefer to commit these)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
